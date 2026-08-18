@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import PanelTabs from '../../components/panel/PanelTabs'
 import { getPeriodoOptions } from '../../utils/periodos'
 import { CENCO_CARTERAS } from '../../config/cencoCarteras'
@@ -28,9 +27,6 @@ export default function PanelCenco() {
 
   return (
     <div className="panel-page">
-      <Link to="/" className="theme-toggle">
-        ← Volver
-      </Link>
       <h1>Cencosud</h1>
 
       <div className="panel-header">

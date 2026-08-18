@@ -1,7 +1,8 @@
-import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom'
+import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import ThemeToggle from './components/ThemeToggle'
+import BackButton from './components/BackButton'
 import Login from './pages/Login'
 import MandanteSelector from './pages/MandanteSelector'
 import PanelCLA from './pages/panels/PanelCLA'
@@ -56,14 +57,24 @@ function AppRoutes() {
   )
 }
 
+function AppTopBar() {
+  const location = useLocation()
+  const showBack = location.pathname.startsWith('/panel/')
+
+  return (
+    <div className="app-topbar">
+      {showBack && <BackButton to="/" />}
+      <ThemeToggle />
+    </div>
+  )
+}
+
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <Router>
-          <div className="theme-toggle-fixed">
-            <ThemeToggle />
-          </div>
+          <AppTopBar />
           <AppRoutes />
         </Router>
       </AuthProvider>
