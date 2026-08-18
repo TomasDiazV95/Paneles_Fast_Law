@@ -21,27 +21,29 @@ function AvanceEtapaCartera({ cartera, filas }) {
 
   return (
     <div style={{ width: '100%' }}>
-      <div className="panel-header" style={{ justifyContent: 'flex-start', gap: 12 }}>
-        <strong>{cartera}</strong>
-        <label className="panel-selector">
-          Categoría
-          <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
-            {CATEGORIAS.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="panel-selector">
-          Tipo
-          <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
-            <option value="cantidad">Cantidad</option>
-            <option value="saldo">Saldo</option>
-          </select>
-        </label>
+      <div className="panel-toolbar" style={{ marginBottom: 10 }}>
+        <div className="panel-toolbar-filters">
+          <strong>{cartera}</strong>
+          <label className="panel-selector">
+            Categoría
+            <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+              {CATEGORIAS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="panel-selector">
+            Tipo
+            <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+              <option value="cantidad">Cantidad</option>
+              <option value="saldo">Saldo</option>
+            </select>
+          </label>
+        </div>
       </div>
-      <BarChartHorizontal data={data} height={200} />
+      <BarChartHorizontal title={`Avance ${cartera} — ${categoria}`} data={data} height={200} />
     </div>
   )
 }
@@ -64,34 +66,36 @@ export default function ProductividadTab({ periodo }) {
   return (
     <>
       <p className="panel-section-title">Productividad general</p>
-      <table className="panel-table">
-        <thead>
-          <tr>
-            <th>Cartera</th>
-            <th>Q Base</th>
-            <th>Saldo Insoluto</th>
-            <th>Pagos Estudio</th>
-            <th>Repros Estudio</th>
-            <th>Pagos Inbound</th>
-            <th>Total Pagos</th>
-            <th>Total Repros</th>
-          </tr>
-        </thead>
-        <tbody>
-          {general.map((row) => (
-            <tr key={row.cartera} className={row.cartera === 'TOTALES' ? 'fila-total' : ''}>
-              <td>{row.cartera}</td>
-              <td>{row.cantidad_base.toLocaleString('es-CL')}</td>
-              <td>{row.saldo_insoluto.toLocaleString('es-CL')}</td>
-              <td>{row.pagos_estudio.toLocaleString('es-CL')}</td>
-              <td>{row.repros_estudio.toLocaleString('es-CL')}</td>
-              <td>{row.pagos_inbound.toLocaleString('es-CL')}</td>
-              <td>{row.total_pagos.toLocaleString('es-CL')}</td>
-              <td>{row.total_repros.toLocaleString('es-CL')}</td>
+      <div className="panel-table-wrapper">
+        <table className="panel-table">
+          <thead>
+            <tr>
+              <th>Cartera</th>
+              <th className="num">Q Base</th>
+              <th className="num">Saldo Insoluto</th>
+              <th className="num">Pagos Estudio</th>
+              <th className="num">Repros Estudio</th>
+              <th className="num">Pagos Inbound</th>
+              <th className="num">Total Pagos</th>
+              <th className="num">Total Repros</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {general.map((row) => (
+              <tr key={row.cartera} className={row.cartera === 'TOTALES' ? 'fila-total' : ''}>
+                <td>{row.cartera}</td>
+                <td className="num">{row.cantidad_base.toLocaleString('es-CL')}</td>
+                <td className="num">{row.saldo_insoluto.toLocaleString('es-CL')}</td>
+                <td className="num">{row.pagos_estudio.toLocaleString('es-CL')}</td>
+                <td className="num">{row.repros_estudio.toLocaleString('es-CL')}</td>
+                <td className="num">{row.pagos_inbound.toLocaleString('es-CL')}</td>
+                <td className="num">{row.total_pagos.toLocaleString('es-CL')}</td>
+                <td className="num">{row.total_repros.toLocaleString('es-CL')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <p className="panel-section-title">Avance por etapa</p>
       {carteras.map((cartera) => (

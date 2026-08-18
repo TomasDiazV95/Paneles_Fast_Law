@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import PanelTabs from '../../components/panel/PanelTabs'
 import { ARAUCANA_CARTERAS } from '../../config/araucanaCarteras'
 import { downloadFile } from '../../api/download'
@@ -31,9 +30,6 @@ export default function PanelAraucana() {
 
   return (
     <div className="panel-page">
-      <Link to="/" className="theme-toggle">
-        ← Volver
-      </Link>
       <h1>La Araucana</h1>
 
       <div className="panel-header">

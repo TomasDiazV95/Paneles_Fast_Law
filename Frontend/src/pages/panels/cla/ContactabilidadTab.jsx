@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import { apiFetch } from '../../../api/client'
 import KpiCard from '../../../components/panel/KpiCard'
 import DonutChart from '../../../components/charts/DonutChart'
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
+import FolderIcon from '@mui/icons-material/Folder'
+import PhoneIcon from '@mui/icons-material/Phone'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 
 export default function ContactabilidadTab({ periodo }) {
   const [data, setData] = useState(null)
@@ -30,16 +34,20 @@ export default function ContactabilidadTab({ periodo }) {
   return (
     <>
       <div className="kpi-row">
-        <KpiCard label="Total Causas" value={totalCausas.toLocaleString('es-CL')} />
-        <KpiCard label="Total Gestiones" value={totalGestiones.toLocaleString('es-CL')} />
-        <KpiCard label="Días Hábiles" value={diasHabiles} />
-        <KpiCard label="Prom. Gestiones/Día" value={promGestionesDia} />
+        <KpiCard label="Total Causas" value={totalCausas.toLocaleString('es-CL')} icon={<FolderIcon />} highlight />
+        <KpiCard label="Total Gestiones" value={totalGestiones.toLocaleString('es-CL')} icon={<PhoneIcon />} />
+        <KpiCard label="Días Hábiles" value={diasHabiles} icon={<CalendarMonthIcon />} />
+        <KpiCard label="Prom. Gestiones/Día" value={promGestionesDia} icon={<TrendingUpIcon />} />
       </div>
 
       <div className="chart-row">
-        <DonutChart data={resumen.map((r) => ({ label: r.tipo_contacto, value: r.cantidad_causas }))} />
+        <DonutChart
+          title="Gestiones por tipo de contacto"
+          data={resumen.map((r) => ({ label: r.tipo_contacto, value: r.cantidad_causas }))}
+        />
         {inboundTotal && (
           <DonutChart
+            title="Contactabilidad Inbound"
             data={[
               { label: 'Contacto Directo Inbound', value: inboundTotal.contacto_directo_inbound },
               { label: 'Sin Contacto Inbound', value: inboundTotal.sin_contacto_inbound },
@@ -48,27 +56,33 @@ export default function ContactabilidadTab({ periodo }) {
         )}
       </div>
 
-      <table className="panel-table">
-        <thead>
-          <tr>
-            <th>Clasificación</th>
-            {tiposContacto.map((tipo) => (
-              <th key={tipo}>{tipo}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {clasificaciones.map((clasificacion) => (
-            <tr key={clasificacion}>
-              <td>{clasificacion}</td>
-              {tiposContacto.map((tipo) => {
-                const celda = matriz.find((r) => r.clasificacion === clasificacion && r.tipo_contacto === tipo)
-                return <td key={tipo}>{celda ? celda.cantidad_causas.toLocaleString('es-CL') : '—'}</td>
-              })}
+      <div className="panel-table-wrapper">
+        <table className="panel-table">
+          <thead>
+            <tr>
+              <th>Clasificación</th>
+              {tiposContacto.map((tipo) => (
+                <th key={tipo} className="num">{tipo}</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {clasificaciones.map((clasificacion) => (
+              <tr key={clasificacion}>
+                <td>{clasificacion}</td>
+                {tiposContacto.map((tipo) => {
+                  const celda = matriz.find((r) => r.clasificacion === clasificacion && r.tipo_contacto === tipo)
+                  return (
+                    <td key={tipo} className="num">
+                      {celda ? celda.cantidad_causas.toLocaleString('es-CL') : '—'}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   )
 }

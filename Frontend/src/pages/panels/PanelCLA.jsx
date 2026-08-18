@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import PanelTabs from '../../components/panel/PanelTabs'
 import { getPeriodoOptions } from '../../utils/periodos'
 import { downloadFile } from '../../api/download'
+import BusinessIcon from '@mui/icons-material/Business'
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
+import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import EstadoCarteraTab from './cla/EstadoCarteraTab'
 import ContactabilidadTab from './cla/ContactabilidadTab'
 import PagosTab from './cla/PagosTab'
@@ -37,38 +39,55 @@ export default function PanelCLA() {
     }
   }
 
+  const periodoLabel = PERIODO_OPTIONS.find((opt) => opt.value === periodo)?.label ?? periodo
+  const tabLabel = TABS.find((t) => t.key === tab)?.label ?? ''
+
   return (
     <div className="panel-page">
-      <Link to="/" className="theme-toggle">
-        ← Volver
-      </Link>
-      <h1>Caja los Andes</h1>
+      <div className="panel-heading">
+        <div className="panel-heading-title">
+          <h1>Caja Los Andes</h1>
+          <span className="panel-heading-context">{tabLabel}</span>
+        </div>
+        <div className="panel-heading-meta">
+          <span className="panel-heading-badge">
+            <BusinessIcon /> Mandante: CLA
+          </span>
+          <span className="panel-heading-badge">
+            <CalendarMonthIcon /> Período: {periodoLabel}
+          </span>
+        </div>
+      </div>
 
-      <div className="panel-header">
-        <label className="panel-selector">
-          Período
-          <select value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
-            {PERIODO_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          className="theme-toggle"
-          onClick={() => descargar('/panel/cla/descargar-pagos', 'sabana_pagos.xlsx')}
-        >
-          Sábana Pagos
-        </button>
-        <button
-          type="button"
-          className="theme-toggle"
-          onClick={() => descargar('/panel/cla/descargar-repros', 'sabana_repros.xlsx')}
-        >
-          Sábana Repros
-        </button>
+      <div className="panel-toolbar">
+        <div className="panel-toolbar-filters">
+          <label className="panel-selector">
+            Período
+            <select value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
+              {PERIODO_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="panel-toolbar-actions">
+          <button
+            type="button"
+            className="panel-download-btn"
+            onClick={() => descargar('/panel/cla/descargar-pagos', 'sabana_pagos.xlsx')}
+          >
+            <FileDownloadIcon /> Sábana Pagos
+          </button>
+          <button
+            type="button"
+            className="panel-download-btn"
+            onClick={() => descargar('/panel/cla/descargar-repros', 'sabana_repros.xlsx')}
+          >
+            <FileDownloadIcon /> Sábana Repros
+          </button>
+        </div>
       </div>
 
       {descargaError && <p className="login-error">{descargaError}</p>}

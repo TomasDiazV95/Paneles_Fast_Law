@@ -2,18 +2,21 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 
 const formatMillones = (v) => `$${(v / 1_000_000).toFixed(1)}M`
 
-export default function BarChartVertical({ data, xKey, yKey, height = 220, color = '#4A9EE8' }) {
+export default function BarChartVertical({ data, xKey, yKey, height = 220, color = '#4A9EE8', title }) {
   return (
-    <div className="chart-box" style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ left: 12, right: 12 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey={xKey} tick={{ fontSize: 11 }} />
-          <YAxis tickFormatter={formatMillones} width={70} />
-          <Tooltip formatter={(value) => value.toLocaleString('es-CL')} />
-          <Bar dataKey={yKey} fill={color} radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+    <div className="chart-box">
+      {title && <p className="chart-title">{title}</p>}
+      <div style={{ height }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 4, left: 4, right: 12, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey={xKey} tick={{ fontSize: 11 }} />
+            <YAxis tickFormatter={formatMillones} width={64} tick={{ fontSize: 11 }} />
+            <Tooltip formatter={(value) => value.toLocaleString('es-CL')} labelStyle={{ fontWeight: 600 }} />
+            <Bar dataKey={yKey} fill={color} radius={[4, 4, 0, 0]} maxBarSize={40} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   )
 }

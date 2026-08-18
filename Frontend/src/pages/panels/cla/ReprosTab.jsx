@@ -4,6 +4,9 @@ import KpiCard from '../../../components/panel/KpiCard'
 import BarChartHorizontal from '../../../components/charts/BarChartHorizontal'
 import BarChartVertical from '../../../components/charts/BarChartVertical'
 import LineChartFilled from '../../../components/charts/LineChartFilled'
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import EventRepeatIcon from '@mui/icons-material/EventRepeat'
 
 export default function ReprosTab({ periodo }) {
   const [data, setData] = useState(null)
@@ -25,41 +28,46 @@ export default function ReprosTab({ periodo }) {
   return (
     <>
       <div className="kpi-row">
-        <KpiCard label="Total Repro" value={total?.total_repro.toLocaleString('es-CL')} />
-        <KpiCard label="Causas con Repro" value={total?.cantidad_causas.toLocaleString('es-CL')} />
-        <KpiCard label="Saldo Acumulado al Día" value={saldoAlDia.toLocaleString('es-CL')} />
+        <KpiCard label="Total Repro" value={total?.total_repro.toLocaleString('es-CL')} icon={<EventRepeatIcon />} highlight />
+        <KpiCard label="Causas con Repro" value={total?.cantidad_causas.toLocaleString('es-CL')} icon={<CheckCircleIcon />} />
+        <KpiCard label="Saldo Acumulado al Día" value={saldoAlDia.toLocaleString('es-CL')} icon={<AccountBalanceWalletIcon />} />
       </div>
 
-      <BarChartHorizontal data={detalle.map((r) => ({ label: r.clasificacion, value: r.total_repro }))} />
+      <BarChartHorizontal
+        title="Total repro por clasificación"
+        data={detalle.map((r) => ({ label: r.clasificacion, value: r.total_repro }))}
+      />
 
       <p className="panel-section-title">Evolución diaria</p>
       <div className="chart-row">
-        <BarChartVertical data={diario} xKey="fecha_repro" yKey="saldo_dia" color="#C55A11" />
-        <LineChartFilled data={diario} xKey="fecha_repro" yKey="saldo_acumulado" color="#C55A11" />
+        <BarChartVertical title="Repro del día" data={diario} xKey="fecha_repro" yKey="saldo_dia" color="#C55A11" />
+        <LineChartFilled title="Saldo acumulado del mes" data={diario} xKey="fecha_repro" yKey="saldo_acumulado" color="#C55A11" />
       </div>
 
-      <table className="panel-table">
-        <thead>
-          <tr>
-            <th>Clasificación</th>
-            <th>Causas</th>
-            <th>% Distribución</th>
-            <th>Total Repro</th>
-            <th>Ticket Recupero</th>
-          </tr>
-        </thead>
-        <tbody>
-          {resumen.map((row) => (
-            <tr key={row.clasificacion} className={row.clasificacion === 'TOTAL GENERAL' ? 'fila-total' : ''}>
-              <td>{row.clasificacion}</td>
-              <td>{row.cantidad_causas.toLocaleString('es-CL')}</td>
-              <td>{row.pct_distribucion}%</td>
-              <td>{row.total_repro.toLocaleString('es-CL')}</td>
-              <td>{row.ticket_recupero.toLocaleString('es-CL')}</td>
+      <div className="panel-table-wrapper">
+        <table className="panel-table">
+          <thead>
+            <tr>
+              <th>Clasificación</th>
+              <th className="num">Causas</th>
+              <th className="num">% Distribución</th>
+              <th className="num">Total Repro</th>
+              <th className="num">Ticket Recupero</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {resumen.map((row) => (
+              <tr key={row.clasificacion} className={row.clasificacion === 'TOTAL GENERAL' ? 'fila-total' : ''}>
+                <td>{row.clasificacion}</td>
+                <td className="num">{row.cantidad_causas.toLocaleString('es-CL')}</td>
+                <td className="num">{row.pct_distribucion}%</td>
+                <td className="num">{row.total_repro.toLocaleString('es-CL')}</td>
+                <td className="num">{row.ticket_recupero.toLocaleString('es-CL')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   )
 }
