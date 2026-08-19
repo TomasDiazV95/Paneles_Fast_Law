@@ -1,5 +1,5 @@
 export const MANDANTES = [
   { code: 'cla', label: 'Caja los Andes' },
   { code: 'cenco', label: 'Cencosud' },
-  { code: 'araucana', label: 'La Araucana' },
+  { code: 'araucana', label: 'Judicial' },
 ]
