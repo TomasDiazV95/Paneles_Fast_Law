@@ -1,25 +1,41 @@
+import os
+import platform
+from urllib.parse import quote_plus
+
 from sqlalchemy import create_engine
-from sqlalchemy.engine import URL
 
 from app.core.config import (
     DB_DATABASE,
-    DB_ODBC_DRIVER,
     DB_PASSWORD,
     DB_SERVER,
     DB_USER,
 )
 
-connection_url = URL.create(
-    "mssql+pyodbc",
-    username=DB_USER,
-    password=DB_PASSWORD,
-    host=DB_SERVER,
-    database=DB_DATABASE,
-    query={
-        "driver": DB_ODBC_DRIVER,
-        "Encrypt": "no",
-        "TrustServerCertificate": "yes",
-    },
+if os.getenv("DB_CONN_STR"):
+    odbc_string = os.getenv("DB_CONN_STR")
+
+elif platform.system() == "Windows":
+    odbc_string = (
+        "DRIVER={ODBC Driver 17 for SQL Server};"
+        f"SERVER={DB_SERVER};"
+        f"DATABASE={DB_DATABASE};"
+        f"UID={DB_USER};"
+        f"PWD={DB_PASSWORD};"
+        "TrustServerCertificate=yes;"
+    )
+
+else:
+    odbc_string = (
+        "DRIVER={FreeTDS};"
+        "SERVERNAME=judicial_sql;"
+        f"DATABASE={DB_DATABASE};"
+        f"UID={DB_USER};"
+        f"PWD={DB_PASSWORD};"
+    )
+
+connection_url = (
+    "mssql+pyodbc:///?odbc_connect="
+    + quote_plus(odbc_string)
 )
 
 engine = create_engine(
