@@ -30,7 +30,7 @@ export default function PanelAraucana() {
 
   return (
     <div className="panel-page">
-      <h1>La Araucana</h1>
+      <h1>Judicial</h1>
 
       <div className="panel-header">
         <label className="panel-selector">
