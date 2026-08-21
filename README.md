@@ -9,6 +9,7 @@ Los mandantes actualmente soportados, según el código (`Frontend/src/config/ma
 - **CLA** — Caja los Andes
 - **CENCO** — Cencosud
 - **ARAUCANA** — La Araucana
+- **UC** — Unidad de Crédito (cartera SQL `ID_PRODUCTO = 890`)
 
 ## Arquitectura general
 
@@ -31,7 +32,7 @@ Esta arquitectura reemplaza paneles legados (CLA/CENCO/ARAUCANA) según el hist�
 - python-dotenv
 - pyjwt
 - werkzeug (usado para verificación de hash de contraseña, `check_password_hash`)
-- openpyxl (generación de planillas Excel para descargas del panel CLA)
+- openpyxl (generación de planillas Excel para descargas de los paneles CLA y UC)
 
 Entorno de desarrollo detectado: Python 3.13 (según `Backend/.venv/pyvenv.cfg`). No hay un archivo que fije una versión mínima de Python de forma explícita (pendiente de confirmar si se requiere una versión específica en otros entornos).
 
@@ -66,12 +67,14 @@ Proyecto_Final/
 │       │   ├── auth.py         # login, me
 │       │   ├── panel_cla.py    # endpoints panel Caja los Andes
 │       │   ├── panel_cenco.py  # endpoints panel Cencosud
-│       │   └── panel_araucana.py # endpoints panel La Araucana
+│       │   ├── panel_araucana.py # endpoints panel La Araucana
+│       │   └── panel_uc.py     # endpoints panel Unidad de Crédito
 │       └── schemas/
 │           ├── auth.py
 │           ├── panel_cla.py
 │           ├── panel_cenco.py
-│           └── panel_araucana.py
+│           ├── panel_araucana.py
+│           └── panel_uc.py
 └── Frontend/
     ├── package.json
     ├── vite.config.js
@@ -86,7 +89,7 @@ Proyecto_Final/
         │   ├── AuthContext.jsx  # login/logout, usuario actual, token en localStorage
         │   └── ThemeContext.jsx
         ├── config/
-        │   ├── mandantes.js         # lista de mandantes (cla, cenco, araucana)
+        │   ├── mandantes.js         # lista de mandantes (cla, cenco, araucana, uc)
         │   ├── cencoCarteras.js     # carteras disponibles para Cencosud (427, 875)
         │   └── araucanaCarteras.js  # carteras disponibles para La Araucana
         ├── pages/
@@ -96,12 +99,15 @@ Proyecto_Final/
         │       ├── PanelCLA.jsx
         │       ├── PanelCenco.jsx
         │       ├── PanelAraucana.jsx
+        │       ├── PanelUC.jsx  # dashboard de una sola página (no usa tabs, a diferencia de los otros paneles)
         │       ├── cla/      (tabs: estado cartera, contactabilidad, pagos, repros, comparativo, ejecutivos, productividad)
         │       ├── cenco/    (tabs: estado cartera, contactabilidad, pagos, repros, comparativo, ejecutivos)
-        │       └── araucana/ (tabs: estado cartera, notificación, búsquedas negativas, embargo)
+        │       ├── araucana/ (tabs: estado cartera, notificación, búsquedas negativas, embargo)
+        │       └── uc/       (bloques del dashboard: KpiGridUC, EmbudoBloque, EstadoCarteraDonut, EvolucionBloque,
+        │                       ActividadDiariaBloque, FranjaHorariaBloque, DimensionesBloque, DetalleTabla, bucketMeta.js)
         └── components/
             ├── panel/ (KpiCard.jsx, PanelTabs.jsx)
-            └── charts/ (BarChartHorizontal, BarChartVertical, DonutChart, LineChartFilled, colors.js)
+            └── charts/ (BarChartHorizontal, BarChartVertical, DonutChart, LineChartFilled, StackedBarChartVertical, colors.js)
 ```
 
 ## Requisitos previos
@@ -180,11 +186,19 @@ También es posible ejecutarlo desde la raíz del proyecto indicando la ruta com
 ## Funcionalidades y vistas disponibles
 
 - **Login** (`Login.jsx`): formulario de usuario/contraseña contra `/auth/login`.
-- **Selector de mandante** (`MandanteSelector.jsx`): pantalla posterior al login para elegir entre CLA, CENCO o ARAUCANA, y cerrar sesión.
+- **Selector de mandante** (`MandanteSelector.jsx`): pantalla posterior al login para elegir entre CLA, CENCO, ARAUCANA o UC, y cerrar sesión.
 - **Panel CLA** (`PanelCLA.jsx`): selector de período; tabs de Estado Cartera, Contactabilidad, Pagos, Reprogramaciones, Comparativo, Ejecutivos y Productividad; descarga de sábanas Excel de Pagos y Reprogramaciones.
 - **Panel CENCO** (`PanelCenco.jsx`): selector de cartera (H1 / T4) y período; tabs de Estado Cartera, Contactabilidad, Pagos, Reprogramaciones, Comparativo y Ejecutivos.
 - **Panel ARAUCANA** (`PanelAraucana.jsx`): selector de cartera (Juicio Ordinario, Caja La Araucana, Lipigas, Forum, Santander, Caja Los Andes, Cencosud); tabs de Estado Cartera, Notificación, Búsquedas Negativas y Embargo; descarga de CSV general y de embargo.
+- **Panel UC** (`PanelUC.jsx`, cartera fija `890` — Unidad de Crédito): a diferencia de CLA/CENCO/ARAUCANA, es un **dashboard de una sola página** (sin tabs), con selector de período y: fila de 10 KPIs (`KpiGridUC.jsx`), embudo de gestión (`EmbudoBloque.jsx`), dona de estado de cartera (`EstadoCarteraDonut.jsx`), evolución temporal con selector de métrica (`EvolucionBloque.jsx`), actividad diaria y franja horaria de gestiones (`ActividadDiariaBloque.jsx`, `FranjaHorariaBloque.jsx`), 6 paneles de análisis por dimensión (ejecutivo, tipificación, estado de convenio, prioridad, intensidad de gestión y estado/bucket — `DimensionesBloque.jsx`) y una tabla de detalle paginada con filtro por clic en los gráficos y exportación a Excel (`DetalleTabla.jsx`). Es la primera iteración del panel; el "Constructor de reportes" y la "Bitácora de exploración" de la propuesta original quedan pendientes para una segunda iteración.
 - Selector de tema claro/oscuro (`ThemeToggle.jsx` / `ThemeContext.jsx`), visible en toda la aplicación.
+
+### Limitaciones conocidas del Panel UC
+
+- Tramo de mora, región, comuna y días de mora existen como columnas en el esquema de datos pero hoy llegan `NULL` al 100% para esta cartera; no se muestran como paneles de dimensión.
+- La "Prioridad de gestión" se muestra como código numérico crudo, sin tabla de homologación a una glosa legible todavía.
+- La regla que distingue "compromiso de pago" vigente de "compromiso roto" (bucket `COMP_ROTO` en `PANEL_UC_CUENTA`) es una hipótesis del equipo de datos, no confirmada por el cliente (ver comentario en el stored procedure de proceso).
+- Solo hay períodos con datos ya procesados manualmente (a la fecha de este documento, 202607 y 202608); no existe todavía un job de SQL Agent que ejecute el proceso de forma periódica.
 
 ## Rutas principales del frontend
 
@@ -197,6 +211,7 @@ Definidas en `Frontend/src/App.jsx` (todas menos `/login` están protegidas y re
 | `/panel/cla` | `PanelCLA` | Protegida |
 | `/panel/cenco` | `PanelCenco` | Protegida |
 | `/panel/araucana` | `PanelAraucana` | Protegida |
+| `/panel/uc` | `PanelUC` | Protegida |
 
 ## Endpoints relevantes del backend
 
@@ -236,15 +251,31 @@ Todos los endpoints bajo `/panel/*` requieren un JWT válido (`Authorization: Be
 - `GET /panel/araucana/descarga` — descarga CSV de la sábana general, filtrado por `cartera` (consulta contra un servidor vinculado externo, ver sección de conexión a SQL Server).
 - `GET /panel/araucana/descarga-embargo` — descarga CSV de la sábana filtrada a etapas de embargo, filtrado por `cartera`.
 
+### Panel UC (`Backend/app/routers/panel_uc.py`, prefijo `/panel/uc`)
+
+El parámetro `cartera` es opcional en todos los endpoints con valor por defecto `890`. El parámetro `periodo` (formato `YYYYMM`) se valida con una dependencia que responde `400` si el formato es inválido, antes de tocar la base de datos.
+
+- `GET /panel/uc/periodos` — lista de períodos con datos procesados y cantidad de cuentas por período, filtrado por `cartera`.
+- `GET /panel/uc/resumen` — los 10 KPI principales del período (cuentas, deuda, cobertura, contactabilidad, compromisos, incumplimiento, intensidad, etc.) comparados contra el período anterior, filtrado por `periodo` y `cartera`.
+- `GET /panel/uc/estado-cartera` — distribución de cuentas/deuda/gestiones por `BUCKET` (estado de gestión), filtrado por `periodo` y `cartera`.
+- `GET /panel/uc/embudo` — embudo de gestión (asignadas → gestionadas → contactadas → contacto directo → con compromiso → compromiso cumplido), filtrado por `periodo` y `cartera`.
+- `GET /panel/uc/evolucion` — serie histórica por período (todos los períodos disponibles) de cuentas, deuda, gestiones, contactabilidad y compromisos, filtrado por `cartera`.
+- `GET /panel/uc/actividad-diaria` — cantidad de cuentas por día de última gestión y bucket, filtrado por `periodo` y `cartera`.
+- `GET /panel/uc/franja-horaria` — cantidad de gestiones y contactos por hora del día, filtrado por `periodo` y `cartera`.
+- `GET /panel/uc/dimensiones` — agrupación de cuentas/deuda/contactos/compromisos por ejecutivo, tipificación, estado de convenio, prioridad (código crudo), intensidad de gestión y bucket, filtrado por `periodo` y `cartera`.
+- `GET /panel/uc/detalle` — listado paginado de cuentas con filtros por `bucket`, `ejecutivo`, `tipificacion`, `estado_convenio` y `fecha`, y orden configurable; filtrado por `periodo` y `cartera`.
+- `GET /panel/uc/descarga` — descarga Excel del detalle de cuentas con los mismos filtros que `/detalle` (sin paginar), filtrado por `periodo` y `cartera`.
+
 No se documentan aquí las consultas SQL completas; solo su propósito, siguiendo la política de este proyecto.
 
 ## Conexión con SQL Server
 
 - El backend se conecta a SQL Server mediante SQLAlchemy con el dialecto `mssql+pyodbc` (`Backend/app/db/database.py`), usando `TrustServerCertificate=yes` y el driver ODBC configurado por `DB_ODBC_DRIVER`.
 - Servidor, base de datos, usuario y contraseña se obtienen desde variables de entorno (ver sección "Variables de entorno"); no hay credenciales hardcodeadas en el código analizado.
-- Las consultas usan principalmente tablas con prefijo `PANEL1_*` (CLA), `PANEL_CENCO_*` (Cencosud) y `PANEL_ARAUCANA_*` (La Araucana), además de `dbo.TBL_USERS` y `dbo.TBL_ROLES` para autenticación.
+- Las consultas usan principalmente tablas con prefijo `PANEL1_*` (CLA), `PANEL_CENCO_*` (Cencosud), `PANEL_ARAUCANA_*` (La Araucana) y `PANEL_UC_*` (Unidad de Crédito), además de `dbo.TBL_USERS` y `dbo.TBL_ROLES` para autenticación.
 - Algunos endpoints de CLA ejecutan stored procedures (`SP_Panel1_Comparativo`, `SP_Panel1_Productividad`, `SP_Panel1_AvanceEtapa`, `SP_Panel1_Sabanas_Caja_Los_Andes`).
 - Los endpoints de descarga de La Araucana consultan además un servidor vinculado (linked server) identificado en el código como `[PROMETEO\FASTCO].SISTEMA_JFASTCO`, con tablas como `tbl_resultados_sabana`, `TBL_CLASIFICACION_ESTADOS` y `TBL_JUICIO`. Esto implica que, además de la base principal, el entorno donde corra el backend debe tener conectividad y permisos hacia ese servidor vinculado.
+- **Panel UC — patrón de proceso batch**: el backend de UC nunca consulta en vivo la tabla de origen `BASE_CARGAS.dbo.TBL_CARGA_INICIAL` (~863 millones de filas, sin índices). En su lugar lee de dos tablas físicas materializadas, `dbo.PANEL_UC_CUENTA` (grano cuenta/documento) y `dbo.PANEL_UC_GESTION` (grano evento de gestión), que son pobladas por el stored procedure `dbo.SP_Panel_UC_Proceso @CARTERA, @Periodo`. Ese SP toma datos de `BASE_CARGAS.dbo.TBL_CARGA_INICIAL`/`TBL_CARGAS_POR_PRODUCTO`, `BASE_GESTIONES.dbo.TBL_B2C_GESTIONES_MG`/`TBL_B2C_GESTIONES` y `TBL_PAGOS_UNICRE`, siguiendo el mismo patrón ETL ya usado por CLA y CENCO. Es transaccional (DELETE + INSERT con `ROLLBACK` ante error) y, por ahora, se ejecuta manualmente (no hay job de SQL Agent programado). El script que crea las tablas y el SP vive en `Backend/scripts_sql/panel_uc_setup.sql` (carpeta excluida del repositorio por `.gitignore`, ya ejecutado contra la base de datos real).
 
 ## Autenticación y roles
 
@@ -270,6 +301,8 @@ Ver secciones "Tecnologías utilizadas" para el detalle completo. Las de mayor i
 - **401 al llamar a endpoints de panel**: los endpoints `/panel/*` requieren un JWT válido; verificar que el token no haya expirado (`JWT_EXPIRE_MINUTES`) y que se esté enviando el header `Authorization: Bearer <token>`.
 - **Descargas de La Araucana (`/panel/araucana/descarga*`) fallan o devuelven 404**: estos endpoints dependen de conectividad al servidor vinculado `PROMETEO\FASTCO` / base `SISTEMA_JFASTCO`; validar que ese servidor esté accesible desde donde corre el backend.
 - **Sin datos en un panel**: varios endpoints devuelven 404 con detalle "Sin datos" cuando la consulta no encuentra filas para el `periodo`/`cartera` seleccionado; probar con otro período o cartera.
+- **400 al llamar a endpoints de `/panel/uc/*`**: el parámetro `periodo` debe tener formato `YYYYMM` (6 dígitos); un valor con otro formato responde `400 Periodo inválido` antes de consultar la base de datos.
+- **Panel UC sin períodos disponibles**: si `/panel/uc/periodos` devuelve una lista vacía, significa que no se ha ejecutado `EXEC dbo.SP_Panel_UC_Proceso @CARTERA=890, @Periodo='YYYYMM'` para ningún período; el proceso es manual (no hay job programado todavía).
 
 ---
 
