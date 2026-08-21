@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import { apiFetch } from '../../../api/client'
 import KpiCard from '../../../components/panel/KpiCard'
 import BarChartHorizontal from '../../../components/charts/BarChartHorizontal'
+import GroupIcon from '@mui/icons-material/Group'
+import PhoneIcon from '@mui/icons-material/Phone'
+import PaymentsIcon from '@mui/icons-material/Payments'
+import EventRepeatIcon from '@mui/icons-material/EventRepeat'
 
 export default function EjecutivosTab({ periodo, cartera }) {
   const [rows, setRows] = useState(null)
@@ -24,10 +28,10 @@ export default function EjecutivosTab({ periodo, cartera }) {
   return (
     <>
       <div className="kpi-row">
-        <KpiCard label="N° Ejecutivos" value={rows.length} />
-        <KpiCard label="Total Contactos" value={totalContactos.toLocaleString('es-CL')} />
-        <KpiCard label="Total Pagos" value={totalMontoPagos.toLocaleString('es-CL')} />
-        <KpiCard label="Total Repros" value={totalMontoRepros.toLocaleString('es-CL')} />
+        <KpiCard label="N° Ejecutivos" value={rows.length} icon={<GroupIcon />} />
+        <KpiCard label="Total Contactos" value={totalContactos.toLocaleString('es-CL')} icon={<PhoneIcon />} highlight />
+        <KpiCard label="Total Pagos" value={totalMontoPagos.toLocaleString('es-CL')} icon={<PaymentsIcon />} />
+        <KpiCard label="Total Repros" value={totalMontoRepros.toLocaleString('es-CL')} icon={<EventRepeatIcon />} />
       </div>
 
       <div className="chart-row">
@@ -35,30 +39,32 @@ export default function EjecutivosTab({ periodo, cartera }) {
         <BarChartHorizontal data={rows.map((r) => ({ label: r.codigo_usuario, value: r.monto_repros }))} />
       </div>
 
-      <table className="panel-table">
-        <thead>
-          <tr>
-            <th>Ejecutivo</th>
-            <th>Contactos</th>
-            <th>Q Pagos</th>
-            <th>Monto Pagos</th>
-            <th>Q Repros</th>
-            <th>Monto Repros</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.codigo_usuario}>
-              <td>{row.codigo_usuario}</td>
-              <td>{row.cantidad_contactos.toLocaleString('es-CL')}</td>
-              <td>{row.cantidad_pagos.toLocaleString('es-CL')}</td>
-              <td>{row.monto_pagos.toLocaleString('es-CL')}</td>
-              <td>{row.cantidad_repros.toLocaleString('es-CL')}</td>
-              <td>{row.monto_repros.toLocaleString('es-CL')}</td>
+      <div className="panel-table-wrapper">
+        <table className="panel-table">
+          <thead>
+            <tr>
+              <th>Ejecutivo</th>
+              <th className="num">Contactos</th>
+              <th className="num">Q Pagos</th>
+              <th className="num">Monto Pagos</th>
+              <th className="num">Q Repros</th>
+              <th className="num">Monto Repros</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.codigo_usuario}>
+                <td>{row.codigo_usuario}</td>
+                <td className="num">{row.cantidad_contactos.toLocaleString('es-CL')}</td>
+                <td className="num">{row.cantidad_pagos.toLocaleString('es-CL')}</td>
+                <td className="num">{row.monto_pagos.toLocaleString('es-CL')}</td>
+                <td className="num">{row.cantidad_repros.toLocaleString('es-CL')}</td>
+                <td className="num">{row.monto_repros.toLocaleString('es-CL')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   )
 }

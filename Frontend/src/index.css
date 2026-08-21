@@ -245,11 +245,18 @@ button {
 .app-topbar {
   position: fixed;
   top: 16px;
-  left: 16px;
   z-index: 50;
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.app-topbar-left {
+  left: 16px;
+}
+
+.app-topbar-right {
+  right: 16px;
 }
 
 .app-topbar-btn {
@@ -768,4 +775,78 @@ button {
 .pct-negative {
   color: var(--danger);
   font-weight: 600;
+}
+
+/* --- Leyendas clicables bajo gráficos (filtro por categoría) --- */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin-top: 10px;
+  padding: 0;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.legend span:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+.legend span.is-system {
+  font-style: italic;
+}
+
+.legend i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+/* Bloques que combinan un .chart-box con una leyenda clicable debajo (filtros
+   por categoría). El .chart-box usa height:100% para llenar la fila cuando es
+   el único contenido de la celda; si esta celda además trae una leyenda, el
+   align-items:stretch de .chart-row la obliga a esa misma altura total, el
+   chart-box la reclama entera y la leyenda queda empujada fuera de la caja,
+   tapada por el contenido siguiente. Se excluye del stretch para que tome su
+   alto natural (chart-box + leyenda) sin desbordarse. */
+.chart-row > .chart-card-legend {
+  align-self: flex-start;
+}
+
+/* --- Selector de métrica embebido en el título de un gráfico --- */
+
+.chart-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.chart-title-row select {
+  margin-left: auto;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
 }

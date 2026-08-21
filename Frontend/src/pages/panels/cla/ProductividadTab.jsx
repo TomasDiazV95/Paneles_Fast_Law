@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { apiFetch } from '../../../api/client'
 import BarChartHorizontal from '../../../components/charts/BarChartHorizontal'
+import KpiCard from '../../../components/panel/KpiCard'
+import FolderIcon from '@mui/icons-material/Folder'
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
+import PaymentsIcon from '@mui/icons-material/Payments'
+import EventRepeatIcon from '@mui/icons-material/EventRepeat'
 
 const CATEGORIAS = ['BUSQUEDA NEGATIVA', 'BUSQUEDA POSITIVA', 'NOTIFICACION', 'EMBARGO', 'OTROS']
 
@@ -62,9 +67,34 @@ export default function ProductividadTab({ periodo }) {
 
   const { general, avance_etapa: avanceEtapa } = data
   const carteras = [...new Set(avanceEtapa.map((f) => f.cartera))]
+  const totalGeneral = general.find((r) => r.cartera === 'TOTALES')
 
   return (
     <>
+      <div className="kpi-row">
+        <KpiCard
+          label="Q Base"
+          value={totalGeneral?.cantidad_base.toLocaleString('es-CL')}
+          icon={<FolderIcon />}
+          highlight
+        />
+        <KpiCard
+          label="Saldo Insoluto"
+          value={totalGeneral?.saldo_insoluto.toLocaleString('es-CL')}
+          icon={<AccountBalanceWalletIcon />}
+        />
+        <KpiCard
+          label="Total Pagos"
+          value={totalGeneral?.total_pagos.toLocaleString('es-CL')}
+          icon={<PaymentsIcon />}
+        />
+        <KpiCard
+          label="Total Repros"
+          value={totalGeneral?.total_repros.toLocaleString('es-CL')}
+          icon={<EventRepeatIcon />}
+        />
+      </div>
+
       <p className="panel-section-title">Productividad general</p>
       <div className="panel-table-wrapper">
         <table className="panel-table">

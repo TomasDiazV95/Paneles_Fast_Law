@@ -9,3 +9,5 @@ dist/
 logs/
 venv/
 .claude/
+Backend/scripts_sql/
+mockups/
