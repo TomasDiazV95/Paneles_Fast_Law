@@ -3,6 +3,9 @@ import { apiFetch } from '../../../api/client'
 import KpiCard from '../../../components/panel/KpiCard'
 import DonutChart from '../../../components/charts/DonutChart'
 import BarChartHorizontal from '../../../components/charts/BarChartHorizontal'
+import FolderIcon from '@mui/icons-material/Folder'
+import PaymentsIcon from '@mui/icons-material/Payments'
+import CategoryIcon from '@mui/icons-material/Category'
 
 export default function EstadoCarteraTab({ periodo, cartera }) {
   const [rows, setRows] = useState(null)
@@ -24,9 +27,9 @@ export default function EstadoCarteraTab({ periodo, cartera }) {
   return (
     <>
       <div className="kpi-row">
-        <KpiCard label="Total Causas" value={totalCausas.toLocaleString('es-CL')} />
-        <KpiCard label="Cuantía Total" value={totalCuantia.toLocaleString('es-CL')} />
-        <KpiCard label="N° Clasificaciones" value={rows.length} />
+        <KpiCard label="Total Causas" value={totalCausas.toLocaleString('es-CL')} icon={<FolderIcon />} highlight />
+        <KpiCard label="Cuantía Total" value={totalCuantia.toLocaleString('es-CL')} icon={<PaymentsIcon />} />
+        <KpiCard label="N° Clasificaciones" value={rows.length} icon={<CategoryIcon />} />
       </div>
 
       <div className="chart-row">
@@ -34,26 +37,28 @@ export default function EstadoCarteraTab({ periodo, cartera }) {
         <DonutChart data={rows.map((r) => ({ label: r.clasificacion, value: r.cantidad_causas }))} />
       </div>
 
-      <table className="panel-table">
-        <thead>
-          <tr>
-            <th>Clasificación</th>
-            <th>Causas</th>
-            <th>Cuantía total</th>
-            <th>Ticket promedio</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.clasificacion}>
-              <td>{row.clasificacion}</td>
-              <td>{row.cantidad_causas.toLocaleString('es-CL')}</td>
-              <td>{row.cuantia_total.toLocaleString('es-CL')}</td>
-              <td>{row.ticket_promedio.toLocaleString('es-CL')}</td>
+      <div className="panel-table-wrapper">
+        <table className="panel-table">
+          <thead>
+            <tr>
+              <th>Clasificación</th>
+              <th className="num">Causas</th>
+              <th className="num">Cuantía total</th>
+              <th className="num">Ticket promedio</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.clasificacion}>
+                <td>{row.clasificacion}</td>
+                <td className="num">{row.cantidad_causas.toLocaleString('es-CL')}</td>
+                <td className="num">{row.cuantia_total.toLocaleString('es-CL')}</td>
+                <td className="num">{row.ticket_promedio.toLocaleString('es-CL')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   )
 }

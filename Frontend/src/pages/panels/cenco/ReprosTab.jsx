@@ -4,6 +4,9 @@ import KpiCard from '../../../components/panel/KpiCard'
 import BarChartHorizontal from '../../../components/charts/BarChartHorizontal'
 import BarChartVertical from '../../../components/charts/BarChartVertical'
 import LineChartFilled from '../../../components/charts/LineChartFilled'
+import EventRepeatIcon from '@mui/icons-material/EventRepeat'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 
 export default function ReprosTab({ periodo, cartera }) {
   const [data, setData] = useState(null)
@@ -27,9 +30,9 @@ export default function ReprosTab({ periodo, cartera }) {
   return (
     <>
       <div className="kpi-row">
-        <KpiCard label="Total Repros" value={total?.monto_total.toLocaleString('es-CL')} />
-        <KpiCard label="Q Documentos" value={total?.cantidad_documentos.toLocaleString('es-CL')} />
-        <KpiCard label="Acumulado al Día" value={acumuladoAlDia.toLocaleString('es-CL')} />
+        <KpiCard label="Total Repros" value={total?.monto_total.toLocaleString('es-CL')} icon={<EventRepeatIcon />} highlight />
+        <KpiCard label="Q Documentos" value={total?.cantidad_documentos.toLocaleString('es-CL')} icon={<CheckCircleIcon />} />
+        <KpiCard label="Acumulado al Día" value={acumuladoAlDia.toLocaleString('es-CL')} icon={<AccountBalanceWalletIcon />} />
       </div>
 
       <BarChartHorizontal data={detalle.map((r) => ({ label: r.clasificacion, value: r.monto_total }))} />
@@ -40,24 +43,26 @@ export default function ReprosTab({ periodo, cartera }) {
         <LineChartFilled data={diario} xKey="fecha" yKey="monto_acumulado" color="#C55A11" />
       </div>
 
-      <table className="panel-table">
-        <thead>
-          <tr>
-            <th>Clasificación</th>
-            <th>Q Documentos</th>
-            <th>Monto Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {resumen.map((row) => (
-            <tr key={row.clasificacion} className={row.clasificacion === 'TOTAL' ? 'fila-total' : ''}>
-              <td>{row.clasificacion}</td>
-              <td>{row.cantidad_documentos.toLocaleString('es-CL')}</td>
-              <td>{row.monto_total.toLocaleString('es-CL')}</td>
+      <div className="panel-table-wrapper">
+        <table className="panel-table">
+          <thead>
+            <tr>
+              <th>Clasificación</th>
+              <th className="num">Q Documentos</th>
+              <th className="num">Monto Total</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {resumen.map((row) => (
+              <tr key={row.clasificacion} className={row.clasificacion === 'TOTAL' ? 'fila-total' : ''}>
+                <td>{row.clasificacion}</td>
+                <td className="num">{row.cantidad_documentos.toLocaleString('es-CL')}</td>
+                <td className="num">{row.monto_total.toLocaleString('es-CL')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   )
 }

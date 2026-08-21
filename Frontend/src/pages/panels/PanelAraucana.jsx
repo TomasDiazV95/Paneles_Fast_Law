@@ -2,6 +2,9 @@ import { useState } from 'react'
 import PanelTabs from '../../components/panel/PanelTabs'
 import { ARAUCANA_CARTERAS } from '../../config/araucanaCarteras'
 import { downloadFile } from '../../api/download'
+import BusinessIcon from '@mui/icons-material/Business'
+import CategoryIcon from '@mui/icons-material/Category'
+import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import EstadoCarteraTab from './araucana/EstadoCarteraTab'
 import EmbargoTab from './araucana/EmbargoTab'
 import NotificacionTab from './araucana/NotificacionTab'
@@ -28,33 +31,57 @@ export default function PanelAraucana() {
     }
   }
 
+  const carteraLabel = ARAUCANA_CARTERAS.find((opt) => opt.value === cartera)?.label ?? cartera
+  const tabLabel = TABS.find((t) => t.key === tab)?.label ?? ''
+
   return (
     <div className="panel-page">
-      <h1>Judicial</h1>
+      <div className="panel-heading">
+        <div className="panel-heading-title">
+          <h1>Judicial</h1>
+          <span className="panel-heading-context">{tabLabel}</span>
+        </div>
+        <div className="panel-heading-meta">
+          <span className="panel-heading-badge">
+            <BusinessIcon /> Mandante: ARAUCANA
+          </span>
+          <span className="panel-heading-badge">
+            <CategoryIcon /> Cartera: {carteraLabel}
+          </span>
+        </div>
+      </div>
 
-      <div className="panel-header">
-        <label className="panel-selector">
-          Cartera
-          <select value={cartera} onChange={(e) => setCartera(e.target.value)}>
-            {ARAUCANA_CARTERAS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button type="button" className="theme-toggle" onClick={() => descargar('/panel/araucana/descarga', 'sabana.csv')}>
-          Descargar CSV
-        </button>
-        {tab === 'embargo' && (
+      <div className="panel-toolbar">
+        <div className="panel-toolbar-filters">
+          <label className="panel-selector">
+            Cartera
+            <select value={cartera} onChange={(e) => setCartera(e.target.value)}>
+              {ARAUCANA_CARTERAS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="panel-toolbar-actions">
           <button
             type="button"
-            className="theme-toggle"
-            onClick={() => descargar('/panel/araucana/descarga-embargo', 'embargo.csv')}
+            className="panel-download-btn"
+            onClick={() => descargar('/panel/araucana/descarga', 'sabana.csv')}
           >
-            Descargar Embargo
+            <FileDownloadIcon /> Descargar CSV
           </button>
-        )}
+          {tab === 'embargo' && (
+            <button
+              type="button"
+              className="panel-download-btn"
+              onClick={() => descargar('/panel/araucana/descarga-embargo', 'embargo.csv')}
+            >
+              <FileDownloadIcon /> Descargar Embargo
+            </button>
+          )}
+        </div>
       </div>
 
       {descargaError && <p className="login-error">{descargaError}</p>}

@@ -53,15 +53,15 @@ export default function NotificacionTab({ cartera }) {
   }
 
   return (
-    <div style={{ overflowX: 'auto', width: '100%' }}>
+    <div className="panel-table-wrapper">
       <table className="panel-table">
         <thead>
           <tr>
             <th>Tipo notificación / Clasificación</th>
             {COLUMNAS.map((mes) => (
-              <th key={mes}>{ETIQUETA_COLUMNA(mes)}</th>
+              <th key={mes} className="num">{ETIQUETA_COLUMNA(mes)}</th>
             ))}
-            <th>Total</th>
+            <th className="num">Total</th>
           </tr>
         </thead>
         <tbody>
@@ -70,18 +70,18 @@ export default function NotificacionTab({ cartera }) {
               <tr className="fila-total" style={{ cursor: 'pointer' }} onClick={() => toggle(grupo.tipo)}>
                 <td>{expandido.has(grupo.tipo) ? '▼' : '▶'} {grupo.tipo}</td>
                 {grupo.totalesPorColumna.map((v, i) => (
-                  <td key={i}>{v.toLocaleString('es-CL')}</td>
+                  <td key={i} className="num">{v.toLocaleString('es-CL')}</td>
                 ))}
-                <td>{grupo.total.toLocaleString('es-CL')}</td>
+                <td className="num">{grupo.total.toLocaleString('es-CL')}</td>
               </tr>
               {expandido.has(grupo.tipo) &&
                 grupo.detalle.map((d) => (
                   <tr key={`${grupo.tipo}-${d.clasificacion}`}>
                     <td style={{ paddingLeft: 28 }}>{d.clasificacion}</td>
                     {d.celdas.map((v, i) => (
-                      <td key={i}>{v.toLocaleString('es-CL')}</td>
+                      <td key={i} className="num">{v.toLocaleString('es-CL')}</td>
                     ))}
-                    <td>{d.total.toLocaleString('es-CL')}</td>
+                    <td className="num">{d.total.toLocaleString('es-CL')}</td>
                   </tr>
                 ))}
             </Fragment>

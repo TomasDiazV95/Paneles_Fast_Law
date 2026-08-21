@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { apiFetch } from '../../../api/client'
 import KpiCard from '../../../components/panel/KpiCard'
 import DonutChart from '../../../components/charts/DonutChart'
+import GavelIcon from '@mui/icons-material/Gavel'
+import GroupIcon from '@mui/icons-material/Group'
+import PaymentsIcon from '@mui/icons-material/Payments'
 
 export default function EmbargoTab({ cartera }) {
   const [rows, setRows] = useState(null)
@@ -21,37 +24,39 @@ export default function EmbargoTab({ cartera }) {
   return (
     <>
       <div className="kpi-row">
-        <KpiCard label="Total Juicios" value={total?.total_juicios.toLocaleString('es-CL')} />
-        <KpiCard label="Total Deudores" value={total?.total_deudores.toLocaleString('es-CL')} />
-        <KpiCard label="Monto Cuantía" value={total?.monto_cuantia.toLocaleString('es-CL')} />
+        <KpiCard label="Total Juicios" value={total?.total_juicios.toLocaleString('es-CL')} icon={<GavelIcon />} highlight />
+        <KpiCard label="Total Deudores" value={total?.total_deudores.toLocaleString('es-CL')} icon={<GroupIcon />} />
+        <KpiCard label="Monto Cuantía" value={total?.monto_cuantia.toLocaleString('es-CL')} icon={<PaymentsIcon />} />
       </div>
 
       <DonutChart data={detalle.map((r) => ({ label: r.clasificacion_etapas, value: r.total_juicios }))} />
 
-      <table className="panel-table">
-        <thead>
-          <tr>
-            <th>Clasificación por etapa</th>
-            <th>Juicios</th>
-            <th>Deudores</th>
-            <th>Monto cuantía</th>
-            <th>% Juicios</th>
-            <th>% Cuantía</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.clasificacion_etapas} className={row.clasificacion_etapas === 'TOTAL' ? 'fila-total' : ''}>
-              <td>{row.clasificacion_etapas}</td>
-              <td>{row.total_juicios.toLocaleString('es-CL')}</td>
-              <td>{row.total_deudores.toLocaleString('es-CL')}</td>
-              <td>{row.monto_cuantia.toLocaleString('es-CL')}</td>
-              <td>{row.pct_juicios}%</td>
-              <td>{row.pct_cuantia}%</td>
+      <div className="panel-table-wrapper">
+        <table className="panel-table">
+          <thead>
+            <tr>
+              <th>Clasificación por etapa</th>
+              <th className="num">Juicios</th>
+              <th className="num">Deudores</th>
+              <th className="num">Monto cuantía</th>
+              <th className="num">% Juicios</th>
+              <th className="num">% Cuantía</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.clasificacion_etapas} className={row.clasificacion_etapas === 'TOTAL' ? 'fila-total' : ''}>
+                <td>{row.clasificacion_etapas}</td>
+                <td className="num">{row.total_juicios.toLocaleString('es-CL')}</td>
+                <td className="num">{row.total_deudores.toLocaleString('es-CL')}</td>
+                <td className="num">{row.monto_cuantia.toLocaleString('es-CL')}</td>
+                <td className="num">{row.pct_juicios}%</td>
+                <td className="num">{row.pct_cuantia}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   )
 }

@@ -41,37 +41,39 @@ export default function BusquedasNegativasTab({ cartera }) {
   const totalesPorColumna = columnas.map((_, i) => filas.reduce((s, f) => s + f.celdas[i], 0))
 
   return (
-    <div style={{ overflowX: 'auto', width: '100%' }}>
+    <>
       <p className="panel-section-title">Solo causas no notificadas</p>
-      <table className="panel-table">
-        <thead>
-          <tr>
-            <th>Último tipo de búsqueda</th>
-            {columnas.map((q) => (
-              <th key={q}>{q}</th>
-            ))}
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filas.map((f) => (
-            <tr key={f.tipo}>
-              <td>{f.tipo}</td>
-              {f.celdas.map((v, i) => (
-                <td key={i}>{v.toLocaleString('es-CL')}</td>
+      <div className="panel-table-wrapper">
+        <table className="panel-table">
+          <thead>
+            <tr>
+              <th>Último tipo de búsqueda</th>
+              {columnas.map((q) => (
+                <th key={q} className="num">{q}</th>
               ))}
-              <td>{f.total.toLocaleString('es-CL')}</td>
+              <th className="num">Total</th>
             </tr>
-          ))}
-          <tr className="fila-total">
-            <td>Total</td>
-            {totalesPorColumna.map((v, i) => (
-              <td key={i}>{v.toLocaleString('es-CL')}</td>
+          </thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr key={f.tipo}>
+                <td>{f.tipo}</td>
+                {f.celdas.map((v, i) => (
+                  <td key={i} className="num">{v.toLocaleString('es-CL')}</td>
+                ))}
+                <td className="num">{f.total.toLocaleString('es-CL')}</td>
+              </tr>
             ))}
-            <td>{totalesPorColumna.reduce((s, v) => s + v, 0).toLocaleString('es-CL')}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            <tr className="fila-total">
+              <td>Total</td>
+              {totalesPorColumna.map((v, i) => (
+                <td key={i} className="num">{v.toLocaleString('es-CL')}</td>
+              ))}
+              <td className="num">{totalesPorColumna.reduce((s, v) => s + v, 0).toLocaleString('es-CL')}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </>
   )
 }
