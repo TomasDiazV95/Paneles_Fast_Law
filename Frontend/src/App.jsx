@@ -8,6 +8,7 @@ import MandanteSelector from './pages/MandanteSelector'
 import PanelCLA from './pages/panels/PanelCLA'
 import PanelCenco from './pages/panels/PanelCenco'
 import PanelAraucana from './pages/panels/PanelAraucana'
+import PanelUC from './pages/panels/PanelUC'
 
 function ProtectedRoute({ children }) {
   const { user, isLoading } = useAuth()
@@ -53,6 +54,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/panel/uc"
+        element={
+          <ProtectedRoute>
+            <PanelUC />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   )
 }
@@ -62,10 +71,16 @@ function AppTopBar() {
   const showBack = location.pathname.startsWith('/panel/')
 
   return (
-    <div className="app-topbar">
-      {showBack && <BackButton to="/" />}
-      <ThemeToggle />
-    </div>
+    <>
+      {showBack && (
+        <div className="app-topbar app-topbar-left">
+          <BackButton to="/" />
+        </div>
+      )}
+      <div className="app-topbar app-topbar-right">
+        <ThemeToggle />
+      </div>
+    </>
   )
 }
 

@@ -12,7 +12,7 @@ export default function DonutChart({ data, height = 280, title }) {
           <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
             <Pie data={data} dataKey="value" nameKey="label" innerRadius="55%" outerRadius="80%" paddingAngle={2}>
               {data.map((entry, index) => (
-                <Cell key={entry.label} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                <Cell key={entry.label} fill={entry.color ?? CHART_COLORS[index % CHART_COLORS.length]} />
               ))}
             </Pie>
             <Tooltip
