@@ -6,7 +6,7 @@ export default function LineChartFilled({ data, xKey, yKey, height = 220, color 
   return (
     <div className="chart-box">
       {title && <p className="chart-title">{title}</p>}
-      <div style={{ height }}>
+      <div className="chart-box-canvas" style={{ minHeight: height }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 4, left: 4, right: 12, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />

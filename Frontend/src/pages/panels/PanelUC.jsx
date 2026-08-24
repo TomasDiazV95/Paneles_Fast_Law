@@ -97,7 +97,11 @@ export default function PanelUC() {
             <EvolucionBloque cartera={CARTERA_UC} />
           </div>
 
-          <div className="chart-row" style={{ marginTop: 4 }}>
+          {/* Esta fila usa proporciones desiguales (2:1), así que se mantiene en
+              flexbox en vez del grid de .chart-row: ninguno de los dos gráficos
+              tiene una leyenda que le agregue alto extra al otro, por lo que no
+              necesita el comportamiento de "llenar la fila estirada". */}
+          <div className="chart-row" style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap' }}>
             <div style={{ flex: 2, minWidth: 420 }}>
               <ActividadDiariaBloque periodo={periodo} cartera={CARTERA_UC} />
             </div>

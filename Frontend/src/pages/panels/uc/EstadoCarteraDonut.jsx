@@ -22,25 +22,22 @@ export default function EstadoCarteraDonut({ periodo, cartera, onFiltro }) {
   if (!conDatos.length) return <p>Sin datos para este período.</p>
 
   return (
-    // Se envuelve todo en un único div para que .chart-row lo trate como un
-    // solo ítem flex (si Donut y la leyenda fueran hermanos sueltos,
-    // ocuparían dos columnas independientes en la fila de gráficos).
-    <div className={onFiltro ? 'chart-card-legend' : undefined}>
-      <DonutChart
-        height={240}
-        data={conDatos.map((r) => ({ label: r.etiqueta, value: r.cuentas, color: BUCKET_META[r.bucket]?.color }))}
-        title="Estado de la cartera — resultado de gestión"
-      />
-      {onFiltro && (
-        <div className="legend">
-          {conDatos.map((r) => (
-            <span key={r.bucket} onClick={() => onFiltro('bucket', r.bucket)}>
-              <i style={{ background: BUCKET_META[r.bucket]?.color ?? 'var(--accent)' }} />
-              {r.etiqueta} ({r.cuentas.toLocaleString('es-CL')})
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
+    <DonutChart
+      height={240}
+      data={conDatos.map((r) => ({ label: r.etiqueta, value: r.cuentas, color: BUCKET_META[r.bucket]?.color }))}
+      title="Estado de la cartera — resultado de gestión"
+      legend={
+        onFiltro && (
+          <div className="legend">
+            {conDatos.map((r) => (
+              <span key={r.bucket} onClick={() => onFiltro('bucket', r.bucket)}>
+                <i style={{ background: BUCKET_META[r.bucket]?.color ?? 'var(--accent)' }} />
+                {r.etiqueta} ({r.cuentas.toLocaleString('es-CL')})
+              </span>
+            ))}
+          </div>
+        )
+      }
+    />
   )
 }

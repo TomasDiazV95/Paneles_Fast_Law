@@ -64,25 +64,25 @@ function PanelDimension({ config, filas, onFiltro }) {
   const tieneLeyenda = Boolean(config.filtro && onFiltro)
 
   return (
-    <div className={tieneLeyenda ? 'chart-card-legend' : undefined}>
-      <BarChartHorizontal
-        data={top.map((r) => ({ label: etiqueta(r.valor), value: r.cuentas }))}
-        height={230}
-        title={config.titulo}
-      />
-      {tieneLeyenda && (
-        <div className="legend">
-          {top.map((r) => (
-            <span
-              key={r.valor}
-              className={config.key === 'ejecutivo' && esEjecutivoSistema(r.valor) ? 'is-system' : undefined}
-              onClick={() => onFiltro(config.filtro, r.valor)}
-            >
-              {etiqueta(r.valor)}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
+    <BarChartHorizontal
+      data={top.map((r) => ({ label: etiqueta(r.valor), value: r.cuentas }))}
+      height={230}
+      title={config.titulo}
+      legend={
+        tieneLeyenda && (
+          <div className="legend">
+            {top.map((r) => (
+              <span
+                key={r.valor}
+                className={config.key === 'ejecutivo' && esEjecutivoSistema(r.valor) ? 'is-system' : undefined}
+                onClick={() => onFiltro(config.filtro, r.valor)}
+              >
+                {etiqueta(r.valor)}
+              </span>
+            ))}
+          </div>
+        )
+      }
+    />
   )
 }
