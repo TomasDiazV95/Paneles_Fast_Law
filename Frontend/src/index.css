@@ -16,6 +16,8 @@
   --success-bg: rgba(47, 158, 68, 0.12);
   --danger: #e5484d;
   --danger-bg: rgba(229, 72, 77, 0.12);
+  --warning: #d9820b;
+  --warning-bg: rgba(217, 130, 11, 0.12);
   --row-hover: rgba(8, 6, 13, 0.035);
   --surface: #fff;
 
@@ -532,6 +534,33 @@ button {
   color: var(--text);
 }
 
+.kpi-card--clickable {
+  appearance: none;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.kpi-card--clickable:hover,
+.kpi-card--clickable:focus-visible {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  outline: none;
+}
+
+.kpi-card-chevron {
+  align-self: center;
+  margin-left: auto;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  color: var(--text);
+  opacity: 0.6;
+}
+
 .chart-row {
   display: flex;
   flex-wrap: wrap;
@@ -849,4 +878,367 @@ button {
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text-h);
+}
+
+/* --- Botón "Actualizar paneles" (solo ADMIN) --- */
+
+.admin-refresh-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--text-h);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.admin-refresh-trigger svg {
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
+}
+
+.admin-refresh-trigger:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.admin-refresh-trigger:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* --- Modal genérico (reutilizable) --- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 6, 13, 0.45);
+  box-sizing: border-box;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100svh - 48px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.modal-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.modal-close-btn:hover {
+  background: var(--code-bg);
+  color: var(--text-h);
+}
+
+.modal-close-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* --- Contenido específico del modal de actualización de paneles --- */
+
+.admin-refresh-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-refresh-intro {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.admin-refresh-submit {
+  width: auto;
+}
+
+/* --- Contenido específico del modal de detalle de pagos (UC) --- */
+
+.pagos-modal-card {
+  max-width: 640px;
+}
+
+.admin-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.admin-alert svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.admin-alert--info {
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+.admin-alert--info svg {
+  color: var(--accent);
+}
+
+.admin-alert--success {
+  background: var(--success-bg);
+  color: var(--text-h);
+}
+
+.admin-alert--success svg {
+  color: var(--success);
+}
+
+.admin-alert--warning {
+  background: var(--warning-bg);
+  color: var(--text-h);
+}
+
+.admin-alert--warning svg {
+  color: var(--warning);
+}
+
+.admin-alert--danger {
+  background: var(--danger-bg);
+  color: var(--text-h);
+}
+
+.admin-alert--danger svg {
+  color: var(--danger);
+}
+
+.admin-refresh-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-refresh-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-refresh-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.admin-refresh-status--running {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.admin-refresh-status--completed {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.admin-refresh-status--completed_with_errors {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.admin-refresh-status--failed {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.admin-refresh-periodo {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.admin-refresh-progress-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-refresh-progress-bar-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--code-bg);
+  overflow: hidden;
+}
+
+.admin-refresh-progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.admin-refresh-progress-label {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.admin-refresh-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.admin-refresh-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+
+.step-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.step-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+
+.step-icon--pending {
+  color: var(--text);
+  opacity: 0.5;
+}
+
+.step-icon--running {
+  color: var(--accent);
+}
+
+.step-icon--done {
+  color: var(--success);
+}
+
+.step-icon--error {
+  color: var(--danger);
+}
+
+.step-label {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-h);
+}
+
+.step-item--error {
+  border-color: var(--danger-border, var(--danger));
+  background: var(--danger-bg);
+}
+
+.step-duration {
+  font-size: 12px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.step-error {
+  font-size: 12px;
+  color: var(--danger);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

@@ -21,7 +21,7 @@ function hint(actual, anterior, pctdelta) {
   return `${signo}${pct}${pctdelta ? ' pp' : '%'} vs. mes anterior`
 }
 
-export default function KpiGridUC({ periodo, cartera }) {
+export default function KpiGridUC({ periodo, cartera, children }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
 
@@ -104,6 +104,7 @@ export default function KpiGridUC({ periodo, cartera }) {
         icon={<SpeedIcon />}
         hint="gestiones por cuenta"
       />
+      {children}
     </div>
   )
 }

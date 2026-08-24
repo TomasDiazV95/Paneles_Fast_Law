@@ -22,6 +22,8 @@ from app.schemas.panel_uc import (
     FranjaHorariaFilaUC,
     KpiPeriodoUC,
     KpiResumenUC,
+    PagoDiaUC,
+    PagosResumenUC,
     PeriodoOptionUC,
 )
 
@@ -41,7 +43,7 @@ BUCKET_ORDER = ["SIN_GESTION", "SIN_CONTACTO", "CONT_SIN_COMP", "COMP_PAGO", "CO
 ORDEN_COLUMNAS = {
     "rut_deudor": "RUT_DEUDOR",
     "nombre_deudor": "NOMBRE_DEUDOR",
-    "monto_documento": "MONTO_DOCUMENTO",
+    "monto_asignado": "MONTO_ASIGNADO",
     "saldo_insoluto": "SALDO_INSOLUTO",
     "cantidad_gestiones": "CANTIDAD_GESTIONES",
     "fecha_ultima_gestion": "FECHA_ULTIMA_GESTION",
@@ -87,9 +89,9 @@ def _kpi_periodo(conn, periodo: str, cartera: int) -> KpiPeriodoUC | None:
         """
         SELECT
             COUNT(*) AS cuentas,
-            ISNULL(SUM(MONTO_DOCUMENTO), 0) AS deuda,
+            ISNULL(SUM(MONTO_ASIGNADO), 0) AS deuda,
             SUM(CASE WHEN BUCKET = 'SIN_GESTION' THEN 1 ELSE 0 END) AS sin_gestion,
-            ISNULL(SUM(CASE WHEN BUCKET = 'SIN_GESTION' THEN MONTO_DOCUMENTO ELSE 0 END), 0) AS deuda_sin_gestion,
+            ISNULL(SUM(CASE WHEN BUCKET = 'SIN_GESTION' THEN MONTO_ASIGNADO ELSE 0 END), 0) AS deuda_sin_gestion,
             ISNULL(SUM(CANTIDAD_GESTIONES), 0) AS gestiones,
             SUM(CASE WHEN TIPO_CONTACTO IN ('CONTACTO TITULAR', 'CONTACTO TERCERO') THEN 1 ELSE 0 END) AS contactos,
             SUM(CASE WHEN TIPO_CONTACTO = 'CONTACTO TITULAR' THEN 1 ELSE 0 END) AS contacto_directo,
@@ -174,7 +176,7 @@ def resumen(periodo: str = Depends(_periodo_valido), cartera: int = 890):
 def estado_cartera(periodo: str = Depends(_periodo_valido), cartera: int = 890):
     query = text(
         """
-        SELECT BUCKET, COUNT(*) AS cuentas, ISNULL(SUM(MONTO_DOCUMENTO), 0) AS deuda,
+        SELECT BUCKET, COUNT(*) AS cuentas, ISNULL(SUM(MONTO_ASIGNADO), 0) AS deuda,
                ISNULL(SUM(CANTIDAD_GESTIONES), 0) AS gestiones
         FROM dbo.PANEL_UC_CUENTA
         WHERE PERIODO = :periodo AND ID_CARTERA = :cartera
@@ -195,6 +197,42 @@ def estado_cartera(periodo: str = Depends(_periodo_valido), cartera: int = 890):
             pct_cuentas=((rows[bucket]["cuentas"] if bucket in rows else 0) / total * 100),
         )
         for bucket in BUCKET_ORDER
+    ]
+
+
+@router.get("/pagos-resumen", response_model=PagosResumenUC)
+def pagos_resumen(periodo: str = Depends(_periodo_valido), cartera: int = 890):
+    query = text(
+        """
+        SELECT ISNULL(SUM(CASOS), 0) AS CASOS, ISNULL(SUM(MONTO), 0) AS MONTO
+        FROM dbo.PANEL_UC_PAGO_DIA
+        WHERE PERIODO = :periodo AND ID_CARTERA = :cartera
+        """
+    )
+    with engine.connect() as conn:
+        r = conn.execute(query, {"periodo": periodo, "cartera": cartera}).mappings().first()
+
+    if r is None:
+        return PagosResumenUC(casos=0, monto=0)
+    return PagosResumenUC(casos=r["CASOS"], monto=int(r["MONTO"]))
+
+
+@router.get("/pagos-detalle", response_model=list[PagoDiaUC])
+def pagos_detalle(periodo: str = Depends(_periodo_valido), cartera: int = 890):
+    query = text(
+        """
+        SELECT FECHA_PAGO, CASOS, MONTO
+        FROM dbo.PANEL_UC_PAGO_DIA
+        WHERE PERIODO = :periodo AND ID_CARTERA = :cartera
+        ORDER BY FECHA_PAGO
+        """
+    )
+    with engine.connect() as conn:
+        rows = conn.execute(query, {"periodo": periodo, "cartera": cartera}).mappings().all()
+
+    return [
+        PagoDiaUC(fecha_pago=_valor(r["FECHA_PAGO"]), casos=r["CASOS"], monto=int(r["MONTO"]))
+        for r in rows
     ]
 
 
@@ -245,7 +283,7 @@ def evolucion(cartera: int = 890):
         """
         SELECT PERIODO,
                COUNT(*) AS cuentas,
-               ISNULL(SUM(MONTO_DOCUMENTO), 0) AS deuda,
+               ISNULL(SUM(MONTO_ASIGNADO), 0) AS deuda,
                ISNULL(SUM(CANTIDAD_GESTIONES), 0) AS gestiones,
                SUM(CASE WHEN BUCKET = 'SIN_GESTION' THEN 1 ELSE 0 END) AS sin_gestion,
                SUM(CASE WHEN TIPO_CONTACTO IN ('CONTACTO TITULAR', 'CONTACTO TERCERO') THEN 1 ELSE 0 END) AS contactos,
@@ -318,7 +356,7 @@ def _dimension_filas(conn, periodo: str, cartera: int, expresion: str) -> list[D
         f"""
         SELECT {expresion} AS VALOR,
                COUNT(*) AS CUENTAS,
-               ISNULL(SUM(MONTO_DOCUMENTO), 0) AS DEUDA,
+               ISNULL(SUM(MONTO_ASIGNADO), 0) AS DEUDA,
                SUM(CASE WHEN TIPO_CONTACTO IN ('CONTACTO TITULAR', 'CONTACTO TERCERO') THEN 1 ELSE 0 END) AS CONTACTOS,
                SUM(CASE WHEN BUCKET IN ('COMP_PAGO', 'COMP_ROTO') THEN 1 ELSE 0 END) AS COMPROMISOS,
                SUM(CASE WHEN BUCKET = 'SIN_GESTION' THEN 1 ELSE 0 END) AS SIN_GESTION
@@ -396,7 +434,7 @@ def _mapear_fila_detalle(r) -> CuentaDetalleUC:
         dv_deudor=r["DV_DEUDOR"],
         nombre_deudor=r["NOMBRE_DEUDOR"],
         numero_documento=r["NUMERO_DOCUMENTO"],
-        monto_documento=r["MONTO_DOCUMENTO"],
+        monto_asignado=r["MONTO_ASIGNADO"],
         saldo_insoluto=r["SALDO_INSOLUTO"],
         plazo=r["PLAZO"],
         anho_vehiculo=r["ANHO_VEHICULO"],
@@ -425,13 +463,13 @@ def detalle(
     tipificacion: str | None = None,
     estado_convenio: str | None = None,
     fecha: str | None = None,
-    orden: str = "monto_documento",
+    orden: str = "monto_asignado",
     direccion: str = "desc",
     pagina: int = 1,
     tamano_pagina: int = 200,
 ):
     where_sql, params = _construir_filtro_detalle(periodo, cartera, bucket, ejecutivo, tipificacion, estado_convenio, fecha)
-    columna_orden = ORDEN_COLUMNAS.get(orden, "MONTO_DOCUMENTO")
+    columna_orden = ORDEN_COLUMNAS.get(orden, "MONTO_ASIGNADO")
     direccion_sql = "ASC" if direccion.lower() == "asc" else "DESC"
     pagina = max(1, pagina)
     tamano_pagina = min(max(1, tamano_pagina), 500)
@@ -445,7 +483,7 @@ def detalle(
     total_query = text(f"SELECT COUNT(*) FROM dbo.PANEL_UC_CUENTA WHERE {where_sql}")
     filas_query = text(
         f"""
-        SELECT RUT_DEUDOR, DV_DEUDOR, NOMBRE_DEUDOR, NUMERO_DOCUMENTO, MONTO_DOCUMENTO, SALDO_INSOLUTO,
+        SELECT RUT_DEUDOR, DV_DEUDOR, NOMBRE_DEUDOR, NUMERO_DOCUMENTO, MONTO_ASIGNADO, SALDO_INSOLUTO,
                PLAZO, ANHO_VEHICULO, CATEGORIA_VEHICULO, ESTADO_CONVENIO, TIPO_CONTACTO, TIPIFICACION,
                FECHA_ULTIMA_GESTION, EJECUTIVO, PRIORIDAD, CANTIDAD_GESTIONES, FECHA_AGENDAMIENTO,
                MONTO_AGENDAMIENTO, MONTO_PAGADO_PERIODO, CUOTAS_PAGADAS, BUCKET
