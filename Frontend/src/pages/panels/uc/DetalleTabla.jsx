@@ -14,7 +14,7 @@ const FILTRO_LABELS = {
 const COLUMNAS = [
   { key: 'rut_deudor', label: 'RUT', orden: 'rut_deudor' },
   { key: 'nombre_deudor', label: 'Titular', orden: 'nombre_deudor' },
-  { key: 'monto_documento', label: 'Deuda $', num: true, orden: 'monto_documento' },
+  { key: 'monto_asignado', label: 'Deuda $', num: true, orden: 'monto_asignado' },
   { key: 'saldo_insoluto', label: 'Saldo insoluto $ (sin homologar)', num: true, orden: 'saldo_insoluto' },
   { key: 'estado_convenio', label: 'Convenio' },
   { key: 'plazo', label: 'Plazo', num: true },
@@ -36,7 +36,7 @@ export default function DetalleTabla({ periodo, cartera, filtros, onLimpiarFiltr
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [pagina, setPagina] = useState(1)
-  const [orden, setOrden] = useState('monto_documento')
+  const [orden, setOrden] = useState('monto_asignado')
   const [direccion, setDireccion] = useState('desc')
   const [descargaError, setDescargaError] = useState('')
 
@@ -140,7 +140,7 @@ export default function DetalleTabla({ periodo, cartera, filtros, onLimpiarFiltr
                         {fila.rut_deudor}-{fila.dv_deudor}
                       </td>
                       <td>{fila.nombre_deudor}</td>
-                      <td className="num">{fila.monto_documento?.toLocaleString('es-CL') ?? '—'}</td>
+                      <td className="num">{fila.monto_asignado?.toLocaleString('es-CL') ?? '—'}</td>
                       <td className="num">{fila.saldo_insoluto?.toLocaleString('es-CL') ?? '—'}</td>
                       <td>{fila.estado_convenio ?? '—'}</td>
                       <td className="num">{fila.plazo ?? '—'}</td>

@@ -22,13 +22,17 @@ export async function apiFetch(path, options = {}) {
 
   if (!response.ok) {
     let detail = 'Ocurrió un error inesperado'
+    let body = null
     try {
-      const body = await response.json()
-      detail = body.detail ?? detail
+      body = await response.json()
+      detail = body?.detail ?? detail
     } catch {
       // respuesta sin cuerpo JSON
     }
-    throw new Error(detail)
+    const error = new Error(typeof detail === 'string' ? detail : JSON.stringify(detail))
+    error.status = response.status
+    error.body = body
+    throw error
   }
 
   if (response.status === 204) return null

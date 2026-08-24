@@ -3,6 +3,7 @@ import { apiFetch } from '../../api/client'
 import BusinessIcon from '@mui/icons-material/Business'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import KpiGridUC from './uc/KpiGridUC'
+import PagosCard from './uc/PagosCard'
 import EmbudoBloque from './uc/EmbudoBloque'
 import EstadoCarteraDonut from './uc/EstadoCarteraDonut'
 import EvolucionBloque from './uc/EvolucionBloque'
@@ -86,7 +87,9 @@ export default function PanelUC() {
             </div>
           </div>
 
-          <KpiGridUC periodo={periodo} cartera={CARTERA_UC} />
+          <KpiGridUC periodo={periodo} cartera={CARTERA_UC}>
+            <PagosCard periodo={periodo} cartera={CARTERA_UC} />
+          </KpiGridUC>
 
           <div className="chart-row">
             <EmbudoBloque periodo={periodo} cartera={CARTERA_UC} />

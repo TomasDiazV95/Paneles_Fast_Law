@@ -95,7 +95,7 @@ class CuentaDetalleUC(BaseModel):
     dv_deudor: str | None
     nombre_deudor: str | None
     numero_documento: str
-    monto_documento: int | None
+    monto_asignado: int | None
     saldo_insoluto: int | None
     plazo: int | None
     anho_vehiculo: str | None
@@ -119,3 +119,14 @@ class DetalleResponseUC(BaseModel):
     pagina: int
     tamano_pagina: int
     filas: list[CuentaDetalleUC]
+
+
+class PagosResumenUC(BaseModel):
+    casos: int
+    monto: int
+
+
+class PagoDiaUC(BaseModel):
+    fecha_pago: str
+    casos: int
+    monto: int
