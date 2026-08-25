@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { apiFetch } from '../api/client'
+import { useJobPolling } from './useJobPolling'
 
 const STORAGE_KEY = 'admin_panel_refresh_job'
 const POLL_INTERVAL_MS = 3000
@@ -57,10 +58,8 @@ function extractJobIdFromConflict(body) {
 export function useAdminPanelRefresh() {
   const [jobId, setJobId] = useState(null)
   const [periodo, setPeriodo] = useState(null)
-  const [job, setJob] = useState(null)
   const [isStarting, setIsStarting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
-  const [pollError, setPollError] = useState(null)
   const [conflictNoJobId, setConflictNoJobId] = useState(false)
 
   // Recupera un job activo guardado en localStorage al montar (ej. si el
@@ -73,34 +72,13 @@ export function useAdminPanelRefresh() {
     }
   }, [])
 
+  const { job, pollError } = useJobPolling(jobId, '/admin/panel-refresh', {
+    intervalMs: POLL_INTERVAL_MS,
+  })
+
   useEffect(() => {
-    if (!jobId) return undefined
-    let cancelled = false
-    let intervalId = null
-
-    async function fetchStatus() {
-      try {
-        const data = await apiFetch(`/admin/panel-refresh/${jobId}`)
-        if (cancelled) return
-        setJob(data)
-        setPollError(null)
-        if (data.status !== 'running') {
-          clearStoredJob()
-          if (intervalId) clearInterval(intervalId)
-        }
-      } catch (err) {
-        if (!cancelled) setPollError(err.message)
-      }
-    }
-
-    fetchStatus()
-    intervalId = setInterval(fetchStatus, POLL_INTERVAL_MS)
-
-    return () => {
-      cancelled = true
-      if (intervalId) clearInterval(intervalId)
-    }
-  }, [jobId])
+    if (job && job.status !== 'running') clearStoredJob()
+  }, [job])
 
   const start = useCallback(async (periodoValue) => {
     setIsStarting(true)
@@ -111,7 +89,6 @@ export function useAdminPanelRefresh() {
         method: 'POST',
         body: JSON.stringify({ periodo: periodoValue }),
       })
-      setJob(null)
       setPeriodo(periodoValue)
       setJobId(data.job_id)
       persistJob(data.job_id, periodoValue)
@@ -135,7 +112,6 @@ export function useAdminPanelRefresh() {
         }
 
         if (existingJobId) {
-          setJob(null)
           setPeriodo(existingPeriodo)
           setJobId(existingJobId)
           persistJob(existingJobId, existingPeriodo)
@@ -153,11 +129,10 @@ export function useAdminPanelRefresh() {
   }, [])
 
   const dismiss = useCallback(() => {
+    clearStoredJob()
     setJobId(null)
     setPeriodo(null)
-    setJob(null)
     setSubmitError(null)
-    setPollError(null)
     setConflictNoJobId(false)
   }, [])
 
