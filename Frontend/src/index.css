@@ -561,28 +561,46 @@ button {
   opacity: 0.6;
 }
 
+/* Grid en vez de flexbox: con flex, cuando un .chart-box crece por
+   align-items:stretch (porque un hermano de la fila es más alto, p.ej. por
+   una leyenda debajo del gráfico), Chrome NO vuelve a repartir ese alto extra
+   entre los hijos internos de ese .chart-box (su propio flex-grow interno
+   usa el alto "hipotético" previo al stretch, no el alto final). El
+   resultado es que el gráfico se queda con hueco vacío debajo, o en algunos
+   casos ni siquiera llega a medir un alto > 0 y no se renderiza. Con CSS
+   Grid, el track de la fila tiene un alto definido desde el principio, así
+   que el flex interno de cada .chart-box sí puede repartir correctamente
+   ese alto entre título/gráfico/leyenda. */
 .chart-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
   width: 100%;
   align-items: stretch;
 }
 
-.chart-row > div {
-  flex: 1;
-  min-width: 300px;
-}
-
 .chart-box {
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px;
   box-sizing: border-box;
   background: var(--surface);
   box-shadow: var(--shadow-sm);
+}
+
+/* Contenedor del gráfico (ResponsiveContainer) dentro de un .chart-box: crece
+   para llenar el alto disponible cuando la fila se estira por un hermano más
+   alto (p.ej. uno con leyenda debajo), en vez de dejar espacio vacío. El
+   min-height inline (prop `height` del componente) es su alto "de diseño":
+   nunca baja de ahí, pero sí puede crecer más. flex-basis en 0% (en vez de
+   auto) para que el cálculo de flex-grow no dependa del alto de su propio
+   contenido (el propio gráfico), evitando otra referencia circular. */
+.chart-box-canvas {
+  flex: 1 1 0%;
 }
 
 .chart-title {
@@ -847,17 +865,6 @@ button {
   height: 8px;
   border-radius: 50%;
   flex: 0 0 auto;
-}
-
-/* Bloques que combinan un .chart-box con una leyenda clicable debajo (filtros
-   por categoría). El .chart-box usa height:100% para llenar la fila cuando es
-   el único contenido de la celda; si esta celda además trae una leyenda, el
-   align-items:stretch de .chart-row la obliga a esa misma altura total, el
-   chart-box la reclama entera y la leyenda queda empujada fuera de la caja,
-   tapada por el contenido siguiente. Se excluye del stretch para que tome su
-   alto natural (chart-box + leyenda) sin desbordarse. */
-.chart-row > .chart-card-legend {
-  align-self: flex-start;
 }
 
 /* --- Selector de métrica embebido en el título de un gráfico --- */
@@ -1241,4 +1248,77 @@ button {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* --- Acciones de la pantalla de selección de mandante (ADMIN / MANTENEDOR) --- */
+
+.mandante-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* --- Carga de archivos (ADMIN / MANTENEDOR) --- */
+
+.carga-page {
+  gap: 20px;
+}
+
+.carga-tipo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  width: 100%;
+  max-width: 720px;
+}
+
+.carga-tipo-card {
+  min-width: 0;
+  width: 100%;
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.carga-form-card {
+  width: 100%;
+  max-width: 480px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: left;
+}
+
+.carga-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.carga-form-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-h);
+}
+
+.carga-checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.carga-detalle-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
 }

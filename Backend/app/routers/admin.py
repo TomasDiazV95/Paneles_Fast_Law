@@ -18,8 +18,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.core.authz import require_admin
 from app.db.database import engine
-from app.routers.auth import get_current_user
 from app.schemas.admin import PanelRefreshAccepted, PanelRefreshRequest, RefreshJobOut
 from app.schemas.auth import UserOut
 
@@ -35,15 +35,6 @@ def _validar_periodo(periodo: str) -> str:
             detail="Periodo inválido: formato esperado YYYYMM",
         )
     return periodo
-
-
-def require_admin(current_user: UserOut = Depends(get_current_user)) -> UserOut:
-    if current_user.role != "ADMIN":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Se requiere rol ADMIN para ejecutar esta acción",
-        )
-    return current_user
 
 
 # --- Definición de los 11 pasos de recálculo ---------------------------------
@@ -151,7 +142,7 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def _crear_job(job_id: str, periodo: str) -> dict:
+def _crear_job(job_id: str, periodo: str, steps: list[dict]) -> dict:
     return {
         "job_id": job_id,
         "periodo": periodo,
@@ -169,16 +160,16 @@ def _crear_job(job_id: str, periodo: str) -> dict:
                 "duration_seconds": None,
                 "error": None,
             }
-            for paso in _STEPS
+            for paso in steps
         ],
     }
 
 
-def _ejecutar_job(job_id: str, periodo: str) -> None:
+def _ejecutar_job(job_id: str, periodo: str, steps: list[dict]) -> None:
     global _running_job_id
     hubo_error = False
 
-    for indice, paso in enumerate(_STEPS):
+    for indice, paso in enumerate(steps):
         with _jobs_lock:
             step = _jobs[job_id]["steps"][indice]
             step["status"] = "running"
@@ -217,23 +208,43 @@ def _ejecutar_job(job_id: str, periodo: str) -> None:
         _running_job_id = None
 
 
+def iniciar_job_pasos(steps: list[dict], periodo: str) -> str | None:
+    """Crea y lanza un job de recálculo con los pasos indicados, reutilizando
+    el mismo store/lock que `/admin/panel-refresh`.
+
+    Pensado para que otros routers (ej. `carga.py`, tras una carga exitosa de
+    UC) puedan encadenar un recálculo parcial sin duplicar esta infra.
+    Devuelve el `job_id`, o `None` si ya hay un job de recálculo en curso
+    (no se encola ni se reintenta: el llamador decide qué hacer con `None`).
+    """
+    global _running_job_id
+    with _jobs_lock:
+        if _running_job_id is not None:
+            return None
+        job_id = str(uuid4())
+        _jobs[job_id] = _crear_job(job_id, periodo, steps)
+        _running_job_id = job_id
+
+    thread = threading.Thread(target=_ejecutar_job, args=(job_id, periodo, steps), daemon=True)
+    thread.start()
+    return job_id
+
+
+# Paso de recálculo del panel UC, expuesto para que `carga.py` pueda
+# encadenarlo solo (sin los otros 10 pasos) tras una carga exitosa.
+UC_STEP = next(paso for paso in _STEPS if paso["mandante"] == "UC")
+
+
 @router.post("/panel-refresh", response_model=PanelRefreshAccepted, status_code=status.HTTP_202_ACCEPTED)
 def panel_refresh(payload: PanelRefreshRequest, current_user: UserOut = Depends(require_admin)):
     periodo = _validar_periodo(payload.periodo)
 
-    global _running_job_id
-    with _jobs_lock:
-        if _running_job_id is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Ya hay una actualización en curso (job_id={_running_job_id})",
-            )
-        job_id = str(uuid4())
-        _jobs[job_id] = _crear_job(job_id, periodo)
-        _running_job_id = job_id
-
-    thread = threading.Thread(target=_ejecutar_job, args=(job_id, periodo), daemon=True)
-    thread.start()
+    job_id = iniciar_job_pasos(_STEPS, periodo)
+    if job_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Ya hay una actualización en curso (job_id={_running_job_id})",
+        )
 
     return PanelRefreshAccepted(job_id=job_id)
 

@@ -1,13 +1,13 @@
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { CHART_COLORS } from './colors'
 
-export default function BarChartHorizontal({ data, height = 280, valueFormatter, title }) {
+export default function BarChartHorizontal({ data, height = 280, valueFormatter, title, legend }) {
   const format = valueFormatter ?? ((v) => v.toLocaleString('es-CL'))
 
   return (
     <div className="chart-box">
       {title && <p className="chart-title">{title}</p>}
-      <div style={{ height }}>
+      <div className="chart-box-canvas" style={{ minHeight: height }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ top: 4, left: 8, right: 28, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} />
@@ -22,6 +22,7 @@ export default function BarChartHorizontal({ data, height = 280, valueFormatter,
           </BarChart>
         </ResponsiveContainer>
       </div>
+      {legend}
     </div>
   )
 }

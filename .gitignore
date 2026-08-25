@@ -10,4 +10,6 @@ logs/
 venv/
 .claude/
 Backend/scripts_sql/
+Backend/etl/logs/
+Backend/uploads_tmp/
 mockups/

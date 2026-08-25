@@ -9,6 +9,7 @@ import PanelCLA from './pages/panels/PanelCLA'
 import PanelCenco from './pages/panels/PanelCenco'
 import PanelAraucana from './pages/panels/PanelAraucana'
 import PanelUC from './pages/panels/PanelUC'
+import CargaArchivos from './pages/CargaArchivos'
 
 function ProtectedRoute({ children }) {
   const { user, isLoading } = useAuth()
@@ -62,13 +63,21 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/carga"
+        element={
+          <ProtectedRoute>
+            <CargaArchivos />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   )
 }
 
 function AppTopBar() {
   const location = useLocation()
-  const showBack = location.pathname.startsWith('/panel/')
+  const showBack = location.pathname.startsWith('/panel/') || location.pathname === '/carga'
 
   return (
     <>

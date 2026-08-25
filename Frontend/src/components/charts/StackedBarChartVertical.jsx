@@ -4,7 +4,7 @@ export default function StackedBarChartVertical({ data, xKey, series, height = 2
   return (
     <div className="chart-box">
       {title && <p className="chart-title">{title}</p>}
-      <div style={{ height }}>
+      <div className="chart-box-canvas" style={{ minHeight: height }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 4, left: 4, right: 12, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />

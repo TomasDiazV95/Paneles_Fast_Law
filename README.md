@@ -41,6 +41,8 @@ Entorno de desarrollo detectado: Python 3.13 (según `Backend/.venv/pyvenv.cfg`)
 - react-dom ^19.2.8
 - react-router-dom ^7.18.2
 - recharts ^3.10.1
+- @mui/material ^9.3.1 y @mui/icons-material ^9.3.1 (componentes de UI e íconos, usados de forma transversal en paneles, botones y modales)
+- @emotion/react ^11.14.0 y @emotion/styled ^11.14.1 (dependencias de estilo requeridas por MUI)
 - vite ^8.2.0 (dev)
 - @vitejs/plugin-react ^6.0.4 (dev)
 - oxlint ^1.75.0 (dev, linter)
@@ -68,13 +70,15 @@ Proyecto_Final/
 │       │   ├── panel_cla.py    # endpoints panel Caja los Andes
 │       │   ├── panel_cenco.py  # endpoints panel Cencosud
 │       │   ├── panel_araucana.py # endpoints panel La Araucana
-│       │   └── panel_uc.py     # endpoints panel Unidad de Crédito
+│       │   ├── panel_uc.py     # endpoints panel Unidad de Crédito
+│       │   └── admin.py        # recálculo manual de paneles (solo rol ADMIN)
 │       └── schemas/
 │           ├── auth.py
 │           ├── panel_cla.py
 │           ├── panel_cenco.py
 │           ├── panel_araucana.py
-│           └── panel_uc.py
+│           ├── panel_uc.py
+│           └── admin.py
 └── Frontend/
     ├── package.json
     ├── vite.config.js
@@ -88,13 +92,15 @@ Proyecto_Final/
         ├── context/
         │   ├── AuthContext.jsx  # login/logout, usuario actual, token en localStorage
         │   └── ThemeContext.jsx
+        ├── hooks/
+        │   └── useAdminPanelRefresh.js  # ciclo de vida del job de "Actualizar paneles" (solo rol ADMIN)
         ├── config/
         │   ├── mandantes.js         # lista de mandantes (cla, cenco, araucana, uc)
         │   ├── cencoCarteras.js     # carteras disponibles para Cencosud (427, 875)
         │   └── araucanaCarteras.js  # carteras disponibles para La Araucana
         ├── pages/
         │   ├── Login.jsx
-        │   ├── MandanteSelector.jsx
+        │   ├── MandanteSelector.jsx  # incluye el botón "Actualizar paneles" (visible solo si role === 'ADMIN')
         │   └── panels/
         │       ├── PanelCLA.jsx
         │       ├── PanelCenco.jsx
@@ -103,10 +109,11 @@ Proyecto_Final/
         │       ├── cla/      (tabs: estado cartera, contactabilidad, pagos, repros, comparativo, ejecutivos, productividad)
         │       ├── cenco/    (tabs: estado cartera, contactabilidad, pagos, repros, comparativo, ejecutivos)
         │       ├── araucana/ (tabs: estado cartera, notificación, búsquedas negativas, embargo)
-        │       └── uc/       (bloques del dashboard: KpiGridUC, EmbudoBloque, EstadoCarteraDonut, EvolucionBloque,
+        │       └── uc/       (bloques del dashboard: KpiGridUC, PagosCard, EmbudoBloque, EstadoCarteraDonut, EvolucionBloque,
         │                       ActividadDiariaBloque, FranjaHorariaBloque, DimensionesBloque, DetalleTabla, bucketMeta.js)
         └── components/
             ├── panel/ (KpiCard.jsx, PanelTabs.jsx)
+            ├── admin/ (PanelRefreshModal.jsx — modal de recálculo de paneles, solo rol ADMIN)
             └── charts/ (BarChartHorizontal, BarChartVertical, DonutChart, LineChartFilled, StackedBarChartVertical, colors.js)
 ```
 
@@ -115,7 +122,7 @@ Proyecto_Final/
 - Python 3.13 (versión verificada en el entorno virtual existente; otras versiones 3.x podrían funcionar pero no están confirmadas).
 - Node.js reciente (versión mínima exacta pendiente de confirmar) y npm.
 - Acceso a una instancia de **SQL Server** con la base de datos configurada (nombre exacto no incluido aquí por seguridad; se define vía variables de entorno).
-- Driver ODBC de SQL Server instalado en el sistema (por defecto el backend usa `ODBC Driver 17 for SQL Server`, configurable vía variable de entorno; ver `Backend/app/core/config.py`).
+- Driver ODBC de SQL Server instalado en el sistema. Según `Backend/app/db/database.py`, el driver se resuelve según el sistema operativo donde corre el backend: en Windows usa `ODBC Driver 17 for SQL Server` (hardcodeado); en cualquier otro sistema (ej. Linux) usa `FreeTDS` con `SERVERNAME=judicial_sql` (también hardcodeado, pendiente de confirmar si ese nombre de servidor DSN corresponde a una entrada fija esperada en `/etc/freetds/freetds.conf` del entorno de despliegue). En ambos casos, esto puede sobreescribirse por completo definiendo la variable de entorno `DB_CONN_STR` con una cadena de conexión ODBC ya armada.
 - Acceso de red al servidor SQL Server correspondiente, incluyendo (para los reportes de La Araucana) al servidor vinculado `PROMETEO\FASTCO` / base `SISTEMA_JFASTCO`, referenciado directamente en las consultas de `Backend/app/routers/panel_araucana.py`.
 
 ## Instalación de dependencias
@@ -150,12 +157,19 @@ Obtenidas exclusivamente de `Backend/app/core/config.py` (no se muestran ni infi
 | `DB_DATABASE` | Sí | — (falla si no está definida) |
 | `DB_USER` | Sí | — (falla si no está definida) |
 | `DB_PASSWORD` | Sí | — (falla si no está definida) |
-| `DB_ODBC_DRIVER` | No | `ODBC Driver 17 for SQL Server` |
 | `JWT_SECRET_KEY` | Sí | — (falla si no está definida) |
 | `JWT_ALGORITHM` | No | `HS256` |
 | `JWT_EXPIRE_MINUTES` | No | `480` |
 
 Las variables marcadas como obligatorias están leídas con `os.environ[...]`, por lo que el backend no arrancará si faltan. No se encontró un archivo `.env.example` en el repositorio (pendiente de confirmar si se desea agregar uno como plantilla, sin valores reales).
+
+Además, `Backend/app/db/database.py` lee directamente (sin pasar por `config.py`) una variable opcional adicional:
+
+| Variable | Obligatoria | Comportamiento si no está definida |
+|---|---|---|
+| `DB_CONN_STR` | No | Se arma la cadena de conexión ODBC internamente según el sistema operativo (ver sección "Requisitos previos") |
+
+Nota: la variable `DB_ODBC_DRIVER` que documentaba una versión anterior de este README **ya no existe en el código** (el driver ODBC quedó hardcodeado según sistema operativo, ver más abajo); si algún `.env` existente todavía la define, no tiene efecto.
 
 `CORS_ORIGINS` está definido como lista fija en el propio código (no como variable de entorno), con los orígenes: `http://localhost:5173`, `http://192.168.60.148:5173`, `http://172.25.30.67:5173`.
 
@@ -186,19 +200,20 @@ También es posible ejecutarlo desde la raíz del proyecto indicando la ruta com
 ## Funcionalidades y vistas disponibles
 
 - **Login** (`Login.jsx`): formulario de usuario/contraseña contra `/auth/login`.
-- **Selector de mandante** (`MandanteSelector.jsx`): pantalla posterior al login para elegir entre CLA, CENCO, ARAUCANA o UC, y cerrar sesión.
+- **Selector de mandante** (`MandanteSelector.jsx`): pantalla posterior al login para elegir entre CLA, CENCO, ARAUCANA o UC, y cerrar sesión. Si el usuario autenticado tiene `role === 'ADMIN'`, se muestra además un botón **"Actualizar paneles"** que abre un modal (`PanelRefreshModal.jsx`, con estado manejado por el hook `useAdminPanelRefresh.js`) para elegir un período y disparar el recálculo real de los 4 mandantes contra `POST /admin/panel-refresh`, con barra de progreso por paso (uno por mandante/cartera) mediante polling a `GET /admin/panel-refresh/{job_id}`.
 - **Panel CLA** (`PanelCLA.jsx`): selector de período; tabs de Estado Cartera, Contactabilidad, Pagos, Reprogramaciones, Comparativo, Ejecutivos y Productividad; descarga de sábanas Excel de Pagos y Reprogramaciones.
 - **Panel CENCO** (`PanelCenco.jsx`): selector de cartera (H1 / T4) y período; tabs de Estado Cartera, Contactabilidad, Pagos, Reprogramaciones, Comparativo y Ejecutivos.
 - **Panel ARAUCANA** (`PanelAraucana.jsx`): selector de cartera (Juicio Ordinario, Caja La Araucana, Lipigas, Forum, Santander, Caja Los Andes, Cencosud); tabs de Estado Cartera, Notificación, Búsquedas Negativas y Embargo; descarga de CSV general y de embargo.
-- **Panel UC** (`PanelUC.jsx`, cartera fija `890` — Unidad de Crédito): a diferencia de CLA/CENCO/ARAUCANA, es un **dashboard de una sola página** (sin tabs), con selector de período y: fila de 10 KPIs (`KpiGridUC.jsx`), embudo de gestión (`EmbudoBloque.jsx`), dona de estado de cartera (`EstadoCarteraDonut.jsx`), evolución temporal con selector de métrica (`EvolucionBloque.jsx`), actividad diaria y franja horaria de gestiones (`ActividadDiariaBloque.jsx`, `FranjaHorariaBloque.jsx`), 6 paneles de análisis por dimensión (ejecutivo, tipificación, estado de convenio, prioridad, intensidad de gestión y estado/bucket — `DimensionesBloque.jsx`) y una tabla de detalle paginada con filtro por clic en los gráficos y exportación a Excel (`DetalleTabla.jsx`). Es la primera iteración del panel; el "Constructor de reportes" y la "Bitácora de exploración" de la propuesta original quedan pendientes para una segunda iteración.
+- **Panel UC** (`PanelUC.jsx`, cartera fija `890` — Unidad de Crédito): a diferencia de CLA/CENCO/ARAUCANA, es un **dashboard de una sola página** (sin tabs), con selector de período y: fila de 10 KPIs (`KpiGridUC.jsx`) más una card adicional de **Pagos** (`PagosCard.jsx`, monto recaudado y cuotas pagadas del período) que al hacer clic abre un modal con el desglose diario, embudo de gestión (`EmbudoBloque.jsx`), dona de estado de cartera (`EstadoCarteraDonut.jsx`), evolución temporal con selector de métrica (`EvolucionBloque.jsx`), actividad diaria y franja horaria de gestiones (`ActividadDiariaBloque.jsx`, `FranjaHorariaBloque.jsx`), 6 paneles de análisis por dimensión (ejecutivo, tipificación, estado de convenio, prioridad, intensidad de gestión y estado/bucket — `DimensionesBloque.jsx`) y una tabla de detalle paginada con filtro por clic en los gráficos y exportación a Excel (`DetalleTabla.jsx`). Es la primera iteración del panel; el "Constructor de reportes" y la "Bitácora de exploración" de la propuesta original quedan pendientes para una segunda iteración.
 - Selector de tema claro/oscuro (`ThemeToggle.jsx` / `ThemeContext.jsx`), visible en toda la aplicación.
 
 ### Limitaciones conocidas del Panel UC
 
-- Tramo de mora, región, comuna y días de mora existen como columnas en el esquema de datos pero hoy llegan `NULL` al 100% para esta cartera; no se muestran como paneles de dimensión.
+- Tramo de mora (`TRAMO_MORA`), región y días de mora existen como columnas en el esquema de datos pero hoy llegan `NULL` al 100% para esta cartera; no se muestran como paneles de dimensión. Además, `PANEL_UC_CUENTA` tiene una columna adicional `TRAMO` (distinta de `TRAMO_MORA`) agregada para uso futuro, sin fuente de datos definida todavía: siempre queda `NULL` (ver `Backend/scripts_sql/panel_uc_monto_asignado_tramo.sql`).
 - La "Prioridad de gestión" se muestra como código numérico crudo, sin tabla de homologación a una glosa legible todavía.
 - La regla que distingue "compromiso de pago" vigente de "compromiso roto" (bucket `COMP_ROTO` en `PANEL_UC_CUENTA`) es una hipótesis del equipo de datos, no confirmada por el cliente (ver comentario en el stored procedure de proceso).
-- Solo hay períodos con datos ya procesados manualmente (a la fecha de este documento, 202607 y 202608); no existe todavía un job de SQL Agent que ejecute el proceso de forma periódica.
+- El endpoint `GET /panel/uc/descarga` sigue exportando la columna `MONTO_DOCUMENTO` (no `MONTO_ASIGNADO`) como "deuda", a diferencia de `GET /panel/uc/detalle`, que ya expone `monto_asignado`; es una inconsistencia detectada en el código (`Backend/app/routers/panel_uc.py`, función `descarga`) pendiente de corrección.
+- El proceso de recálculo (`SP_Panel_UC_Proceso`) puede dispararse bajo demanda desde la interfaz mediante el botón "Actualizar paneles" (solo visible para usuarios con rol `ADMIN`, ver sección "Autenticación y roles"), sin necesidad de ejecutar SQL manualmente. Sin embargo, no existe todavía un job de SQL Agent (ni ningún otro mecanismo automático) que dispare ese recálculo de forma periódica: el proceso, manual o vía el botón de administración, siempre requiere que alguien lo inicie explícitamente.
 
 ## Rutas principales del frontend
 
@@ -258,31 +273,44 @@ El parámetro `cartera` es opcional en todos los endpoints con valor por defecto
 - `GET /panel/uc/periodos` — lista de períodos con datos procesados y cantidad de cuentas por período, filtrado por `cartera`.
 - `GET /panel/uc/resumen` — los 10 KPI principales del período (cuentas, deuda, cobertura, contactabilidad, compromisos, incumplimiento, intensidad, etc.) comparados contra el período anterior, filtrado por `periodo` y `cartera`.
 - `GET /panel/uc/estado-cartera` — distribución de cuentas/deuda/gestiones por `BUCKET` (estado de gestión), filtrado por `periodo` y `cartera`.
+- `GET /panel/uc/pagos-resumen` — total de monto recaudado y cuotas pagadas del período, filtrado por `periodo` y `cartera` (lee de `dbo.PANEL_UC_PAGO_DIA`).
+- `GET /panel/uc/pagos-detalle` — desglose diario (fecha, casos, monto) de los pagos del período, filtrado por `periodo` y `cartera` (misma tabla `dbo.PANEL_UC_PAGO_DIA`).
 - `GET /panel/uc/embudo` — embudo de gestión (asignadas → gestionadas → contactadas → contacto directo → con compromiso → compromiso cumplido), filtrado por `periodo` y `cartera`.
 - `GET /panel/uc/evolucion` — serie histórica por período (todos los períodos disponibles) de cuentas, deuda, gestiones, contactabilidad y compromisos, filtrado por `cartera`.
 - `GET /panel/uc/actividad-diaria` — cantidad de cuentas por día de última gestión y bucket, filtrado por `periodo` y `cartera`.
 - `GET /panel/uc/franja-horaria` — cantidad de gestiones y contactos por hora del día, filtrado por `periodo` y `cartera`.
 - `GET /panel/uc/dimensiones` — agrupación de cuentas/deuda/contactos/compromisos por ejecutivo, tipificación, estado de convenio, prioridad (código crudo), intensidad de gestión y bucket, filtrado por `periodo` y `cartera`.
-- `GET /panel/uc/detalle` — listado paginado de cuentas con filtros por `bucket`, `ejecutivo`, `tipificacion`, `estado_convenio` y `fecha`, y orden configurable; filtrado por `periodo` y `cartera`.
-- `GET /panel/uc/descarga` — descarga Excel del detalle de cuentas con los mismos filtros que `/detalle` (sin paginar), filtrado por `periodo` y `cartera`.
+- `GET /panel/uc/detalle` — listado paginado de cuentas con filtros por `bucket`, `ejecutivo`, `tipificacion`, `estado_convenio` y `fecha`, y orden configurable; filtrado por `periodo` y `cartera`. El campo de deuda de cada cuenta se llama `monto_asignado` en la respuesta (proviene de la columna `MONTO_ASIGNADO`, poblada desde `DATO_28` del origen; reemplazó a `MONTO_DOCUMENTO` como fuente de "deuda asignada" en todos los cálculos del panel UC).
+- `GET /panel/uc/descarga` — descarga Excel del detalle de cuentas con los mismos filtros que `/detalle` (sin paginar), filtrado por `periodo` y `cartera`. Nota: a diferencia de `/detalle`, esta descarga todavía exporta la columna `MONTO_DOCUMENTO` en vez de `MONTO_ASIGNADO` (ver "Limitaciones conocidas del Panel UC").
 
 No se documentan aquí las consultas SQL completas; solo su propósito, siguiendo la política de este proyecto.
 
+### Administración (`Backend/app/routers/admin.py`, prefijo `/admin`)
+
+Estos 3 endpoints requieren, además de un JWT válido, que el usuario autenticado tenga `role == "ADMIN"` (`require_admin`, devuelve `403` si no cumple). Son el único lugar del backend con esta restricción; el resto de los endpoints de panel no diferencian por rol (ver "Autenticación y roles").
+
+- `POST /admin/panel-refresh` — recibe `{ "periodo": "YYYYMM" }` y dispara en segundo plano (`threading.Thread`) el recálculo real de los 4 mandantes (CLA, CENCO, ARAUCANA con sus 7 carteras/productos, y UC), ejecutando para cada uno el stored procedure de proceso correspondiente (`SP_Panel1_Proceso_Caja_Los_Andes`, `SP_Panel_Proceso_Cenco`, `SP_Panel_Proceso_ARAUCANA`, `SP_Panel_UC_Proceso`). Devuelve `202` con un `job_id`; responde `409` si ya hay una actualización en curso.
+- `GET /admin/panel-refresh/last` — devuelve el estado del último job registrado (el más reciente por fecha de inicio).
+- `GET /admin/panel-refresh/{job_id}` — devuelve el estado y progreso paso a paso (por mandante/cartera) de un job específico.
+
+El estado de los jobs se guarda en un diccionario en memoria del proceso (`app/routers/admin.py`), protegido por un `threading.Lock`. Esto implica que el historial de jobs **no sobrevive un reinicio del backend** y **no funcionaría correctamente si el backend se despliega con más de un worker** (ej. `gunicorn -w N`), ya que cada worker tendría su propio store aislado.
+
 ## Conexión con SQL Server
 
-- El backend se conecta a SQL Server mediante SQLAlchemy con el dialecto `mssql+pyodbc` (`Backend/app/db/database.py`), usando `TrustServerCertificate=yes` y el driver ODBC configurado por `DB_ODBC_DRIVER`.
+- El backend se conecta a SQL Server mediante SQLAlchemy con el dialecto `mssql+pyodbc` (`Backend/app/db/database.py`), armando la cadena de conexión ODBC según el sistema operativo (Windows: `ODBC Driver 17 for SQL Server`; otro SO: `FreeTDS`), con `TrustServerCertificate=yes`, salvo que se defina `DB_CONN_STR` para sobreescribir la cadena completa (ver secciones "Requisitos previos" y "Variables de entorno").
+- El motor (`engine`) se crea con `pool_pre_ping=True`, `isolation_level="AUTOCOMMIT"` y parámetros explícitos de pool (`pool_size=10`, `max_overflow=20`, `pool_timeout=30`, `pool_recycle=1800`). Este ajuste corrigió un problema real de conexiones que quedaban con transacciones abiertas sin cerrarse.
 - Servidor, base de datos, usuario y contraseña se obtienen desde variables de entorno (ver sección "Variables de entorno"); no hay credenciales hardcodeadas en el código analizado.
 - Las consultas usan principalmente tablas con prefijo `PANEL1_*` (CLA), `PANEL_CENCO_*` (Cencosud), `PANEL_ARAUCANA_*` (La Araucana) y `PANEL_UC_*` (Unidad de Crédito), además de `dbo.TBL_USERS` y `dbo.TBL_ROLES` para autenticación.
 - Algunos endpoints de CLA ejecutan stored procedures (`SP_Panel1_Comparativo`, `SP_Panel1_Productividad`, `SP_Panel1_AvanceEtapa`, `SP_Panel1_Sabanas_Caja_Los_Andes`).
 - Los endpoints de descarga de La Araucana consultan además un servidor vinculado (linked server) identificado en el código como `[PROMETEO\FASTCO].SISTEMA_JFASTCO`, con tablas como `tbl_resultados_sabana`, `TBL_CLASIFICACION_ESTADOS` y `TBL_JUICIO`. Esto implica que, además de la base principal, el entorno donde corra el backend debe tener conectividad y permisos hacia ese servidor vinculado.
-- **Panel UC — patrón de proceso batch**: el backend de UC nunca consulta en vivo la tabla de origen `BASE_CARGAS.dbo.TBL_CARGA_INICIAL` (~863 millones de filas, sin índices). En su lugar lee de dos tablas físicas materializadas, `dbo.PANEL_UC_CUENTA` (grano cuenta/documento) y `dbo.PANEL_UC_GESTION` (grano evento de gestión), que son pobladas por el stored procedure `dbo.SP_Panel_UC_Proceso @CARTERA, @Periodo`. Ese SP toma datos de `BASE_CARGAS.dbo.TBL_CARGA_INICIAL`/`TBL_CARGAS_POR_PRODUCTO`, `BASE_GESTIONES.dbo.TBL_B2C_GESTIONES_MG`/`TBL_B2C_GESTIONES` y `TBL_PAGOS_UNICRE`, siguiendo el mismo patrón ETL ya usado por CLA y CENCO. Es transaccional (DELETE + INSERT con `ROLLBACK` ante error) y, por ahora, se ejecuta manualmente (no hay job de SQL Agent programado). El script que crea las tablas y el SP vive en `Backend/scripts_sql/panel_uc_setup.sql` (carpeta excluida del repositorio por `.gitignore`, ya ejecutado contra la base de datos real).
+- **Panel UC — patrón de proceso batch**: el backend de UC nunca consulta en vivo la tabla de origen `BASE_CARGAS.dbo.TBL_CARGA_INICIAL` (~863 millones de filas, sin índices). En su lugar lee de tres tablas físicas materializadas, `dbo.PANEL_UC_CUENTA` (grano cuenta/documento), `dbo.PANEL_UC_GESTION` (grano evento de gestión) y `dbo.PANEL_UC_PAGO_DIA` (grano día de pago, persistencia histórica del desglose diario de pagos, ya que la tabla de origen `TBL_PAGOS_UNICRE` no acumula histórico — solo conserva el período vigente), que son pobladas por el stored procedure `dbo.SP_Panel_UC_Proceso @CARTERA, @Periodo`. Ese SP toma datos de `BASE_CARGAS.dbo.TBL_CARGA_INICIAL`/`TBL_CARGAS_POR_PRODUCTO`, `BASE_GESTIONES.dbo.TBL_B2C_GESTIONES_MG`/`TBL_B2C_GESTIONES` y `TBL_PAGOS_UNICRE`, siguiendo el mismo patrón ETL ya usado por CLA y CENCO. Es transaccional (DELETE + INSERT con `ROLLBACK` ante error) y puede dispararse manualmente por SQL o bajo demanda desde el botón admin "Actualizar paneles" (`POST /admin/panel-refresh`); no existe todavía un job de SQL Agent que lo ejecute de forma periódica y automática. El script que crea las tablas y el SP original vive en `Backend/scripts_sql/panel_uc_setup.sql`; dos scripts posteriores extienden ese mismo SP: `panel_uc_monto_asignado_tramo.sql` (agrega las columnas `MONTO_ASIGNADO` y `TRAMO` a `PANEL_UC_CUENTA`) y `panel_uc_pago_dia.sql` (crea `PANEL_UC_PAGO_DIA` y el bloque del SP que la puebla). Los tres viven en una carpeta excluida del repositorio por `.gitignore`, ya ejecutados contra la base de datos real.
 
 ## Autenticación y roles
 
 - Autenticación basada en **JWT** (`Backend/app/core/security.py`), firmado con `JWT_SECRET_KEY` y algoritmo `JWT_ALGORITHM` (por defecto `HS256`), con expiración configurable vía `JWT_EXPIRE_MINUTES` (por defecto 480 minutos).
 - Las contraseñas se verifican con `werkzeug.security.check_password_hash` contra un hash almacenado en `dbo.TBL_USERS.password_hash`; el backend nunca maneja contraseñas en texto plano más allá de la verificación puntual.
-- El rol del usuario (`role`, código proveniente de `dbo.TBL_ROLES`) se incluye en el payload del JWT y se devuelve en `/auth/login` y `/auth/me`, pero en el código revisado **no se encontró lógica que restrinja el acceso a paneles o endpoints según el rol** (solo se exige estar autenticado). Esto queda como pendiente de confirmar si es el comportamiento esperado o si falta implementar autorización por rol.
-- En el frontend, el token se guarda en `localStorage` (`Frontend/src/api/client.js`) y se envía como `Authorization: Bearer <token>` en cada request; las rutas protegidas (`ProtectedRoute` en `App.jsx`) solo verifican que exista un usuario autenticado, sin diferenciar por rol.
+- El rol del usuario (`role`, código proveniente de `dbo.TBL_ROLES`) se incluye en el payload del JWT y se devuelve en `/auth/login` y `/auth/me`. Existe una única restricción de acceso por rol en todo el código revisado: la dependencia `require_admin` de `Backend/app/routers/admin.py`, que exige `role == "ADMIN"` (responde `403` si no se cumple) para los 3 endpoints bajo `/admin/*` (recálculo manual de paneles). Fuera de eso, **el resto de los endpoints de panel (`/panel/*`) no restringen el acceso según el rol**, solo exigen estar autenticado.
+- En el frontend, el token se guarda en `localStorage` (`Frontend/src/api/client.js`) y se envía como `Authorization: Bearer <token>` en cada request; las rutas protegidas (`ProtectedRoute` en `App.jsx`) solo verifican que exista un usuario autenticado, sin diferenciar por rol. La única diferenciación visual por rol en el frontend es el botón "Actualizar paneles" en `MandanteSelector.jsx`, que solo se renderiza si `user.role === 'ADMIN'` (una ocultación de UI, no un control de seguridad por sí sola: la protección real ocurre en el backend vía `require_admin`).
 
 ## Dependencias importantes
 
@@ -292,17 +320,20 @@ Ver secciones "Tecnologías utilizadas" para el detalle completo. Las de mayor i
 - `pyjwt` + `werkzeug`: autenticación (JWT y verificación de hash de password).
 - `openpyxl`: generación de archivos Excel para descargas.
 - `react`, `react-router-dom`, `recharts`, `vite`: base del frontend y sus gráficos.
+- `@mui/material` + `@mui/icons-material` (con `@emotion/react`/`@emotion/styled` como dependencias de estilo): íconos y componentes de UI usados de forma transversal en paneles, botones y modales, incluyendo el modal de administración de recálculo de paneles.
 
 ## Troubleshooting básico
 
 - **El backend no arranca / error de variable de entorno faltante**: revisar que el archivo `.env` en la raíz del proyecto contenga `DB_SERVER`, `DB_DATABASE`, `DB_USER`, `DB_PASSWORD` y `JWT_SECRET_KEY`, ya que se leen con `os.environ[...]` y no tienen valor por defecto.
-- **Error de conexión a SQL Server / driver ODBC no encontrado**: verificar que el driver indicado en `DB_ODBC_DRIVER` (o el valor por defecto `ODBC Driver 17 for SQL Server`) esté instalado en el sistema donde corre el backend.
+- **Error de conexión a SQL Server / driver ODBC no encontrado**: verificar que el driver que corresponde según el sistema operativo (`ODBC Driver 17 for SQL Server` en Windows, `FreeTDS` en otros sistemas) esté instalado en el sistema donde corre el backend, o definir `DB_CONN_STR` con una cadena de conexión ODBC propia si se necesita otro driver.
 - **El frontend no puede llamar a la API (errores 404/CORS)**: en desarrollo, el frontend depende de que el backend esté corriendo en `http://localhost:8000` (target del proxy en `vite.config.js`); si el backend corre en otro host/puerto, hay que ajustar ese proxy o las reglas de `CORS_ORIGINS` en `Backend/app/core/config.py`.
 - **401 al llamar a endpoints de panel**: los endpoints `/panel/*` requieren un JWT válido; verificar que el token no haya expirado (`JWT_EXPIRE_MINUTES`) y que se esté enviando el header `Authorization: Bearer <token>`.
 - **Descargas de La Araucana (`/panel/araucana/descarga*`) fallan o devuelven 404**: estos endpoints dependen de conectividad al servidor vinculado `PROMETEO\FASTCO` / base `SISTEMA_JFASTCO`; validar que ese servidor esté accesible desde donde corre el backend.
 - **Sin datos en un panel**: varios endpoints devuelven 404 con detalle "Sin datos" cuando la consulta no encuentra filas para el `periodo`/`cartera` seleccionado; probar con otro período o cartera.
 - **400 al llamar a endpoints de `/panel/uc/*`**: el parámetro `periodo` debe tener formato `YYYYMM` (6 dígitos); un valor con otro formato responde `400 Periodo inválido` antes de consultar la base de datos.
-- **Panel UC sin períodos disponibles**: si `/panel/uc/periodos` devuelve una lista vacía, significa que no se ha ejecutado `EXEC dbo.SP_Panel_UC_Proceso @CARTERA=890, @Periodo='YYYYMM'` para ningún período; el proceso es manual (no hay job programado todavía).
+- **Panel UC sin períodos disponibles**: si `/panel/uc/periodos` devuelve una lista vacía, significa que no se ha ejecutado `EXEC dbo.SP_Panel_UC_Proceso @CARTERA=890, @Periodo='YYYYMM'` para ningún período; el proceso puede dispararse manualmente por SQL o mediante el botón "Actualizar paneles" (solo admin), pero no hay job programado que lo ejecute solo.
+- **403 al llamar a `/admin/*`**: estos endpoints exigen `role == "ADMIN"` en el JWT del usuario (`require_admin` en `Backend/app/routers/admin.py`); un usuario autenticado con otro rol recibe `403`.
+- **409 al iniciar una actualización de paneles (`POST /admin/panel-refresh`)**: ya hay un job de recálculo en curso; el backend solo permite un job a la vez. Hay que esperar a que termine (o consultar `GET /admin/panel-refresh/last`) antes de iniciar uno nuevo.
 
 ---
 
