@@ -8,6 +8,7 @@ JobStatus = Literal["running", "completed", "completed_with_errors", "failed"]
 
 class PanelRefreshRequest(BaseModel):
     periodo: str
+    mandantes: list[Literal["CLA", "CENCO", "ARAUCANA", "UC"]]
 
 
 class PanelRefreshAccepted(BaseModel):

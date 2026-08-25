@@ -72,12 +72,24 @@ function todayYearMonth() {
 // condicional), para no romper las reglas de hooks con un return temprano.
 export default function PanelRefreshModal({ onClose, refresh }) {
   const [periodoInput, setPeriodoInput] = useState(todayYearMonth)
+  const [mandantesSeleccionados, setMandantesSeleccionados] = useState(() =>
+    MANDANTES.reduce((acc, m) => {
+      acc[m.code.toUpperCase()] = true
+      return acc
+    }, {}),
+  )
 
   const { jobId, job, isStarting, isRunning, submitError, pollError, conflictNoJobId, start, dismiss } = refresh
 
   const periodoValue = periodoInput.replace('-', '')
   const periodoValido = /^\d{6}$/.test(periodoValue)
-  const startDisabled = !periodoValido || isStarting || isRunning || conflictNoJobId
+  const mandantesElegidos = Object.keys(mandantesSeleccionados).filter((code) => mandantesSeleccionados[code])
+  const startDisabled =
+    !periodoValido || mandantesElegidos.length === 0 || isStarting || isRunning || conflictNoJobId
+
+  function toggleMandante(code) {
+    setMandantesSeleccionados((prev) => ({ ...prev, [code]: !prev[code] }))
+  }
 
   const steps = job?.steps ?? []
   const grupos = groupStepsByMandante(steps)
@@ -99,7 +111,7 @@ export default function PanelRefreshModal({ onClose, refresh }) {
   function handleStart(e) {
     e.preventDefault()
     if (startDisabled) return
-    start(periodoValue)
+    start(periodoValue, mandantesElegidos)
   }
 
   function handleClose() {
@@ -131,8 +143,8 @@ export default function PanelRefreshModal({ onClose, refresh }) {
           {!jobId && (
             <form onSubmit={handleStart} className="admin-refresh-form">
               <p className="admin-refresh-intro">
-                Recalcula los 4 mandantes (CLA, CENCO, ARAUCANA y UC) para el período que indiques.
-                El proceso corre en segundo plano y puede tardar varios minutos.
+                Recalcula los mandantes seleccionados para el período que indiques. El proceso corre
+                en segundo plano y puede tardar varios minutos.
               </p>
 
               <label className="login-field">
@@ -144,6 +156,28 @@ export default function PanelRefreshModal({ onClose, refresh }) {
                   required
                 />
               </label>
+
+              <div className="login-field">
+                <span>Mandantes a incluir</span>
+                <div className="admin-refresh-mandantes">
+                  {MANDANTES.map((m) => {
+                    const code = m.code.toUpperCase()
+                    return (
+                      <label key={code} className="carga-checkbox-field">
+                        <input
+                          type="checkbox"
+                          checked={mandantesSeleccionados[code] ?? false}
+                          onChange={() => toggleMandante(code)}
+                        />
+                        {m.label}
+                      </label>
+                    )
+                  })}
+                </div>
+                {mandantesElegidos.length === 0 && (
+                  <span className="admin-refresh-mandantes-hint">Selecciona al menos un mandante.</span>
+                )}
+              </div>
 
               <div className="admin-alert admin-alert--info">
                 <InfoOutlinedIcon />
