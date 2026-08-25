@@ -43,3 +43,11 @@ class CargaJobOut(BaseModel):
     tipo_error: Optional[TipoErrorCarga] = None
     detalle: Optional[dict[str, Any]] = None
     recalculo_job_id: Optional[str] = None
+
+
+class UltimaCargaOut(BaseModel):
+    tipo_carga: TipoCarga
+    tiene_registro: bool
+    usuario: Optional[str] = None
+    archivo_nombre: Optional[str] = None
+    fecha: Optional[str] = None
