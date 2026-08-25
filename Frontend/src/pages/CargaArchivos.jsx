@@ -35,6 +35,19 @@ function todayYearMonth() {
   return `${now.getFullYear()}-${month}`
 }
 
+function formatFechaCarga(iso) {
+  if (!iso) return '—'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return date.toLocaleString('es-CL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export default function CargaArchivos() {
   const [tipos, setTipos] = useState([])
   const [tiposLoading, setTiposLoading] = useState(true)
@@ -45,6 +58,9 @@ export default function CargaArchivos() {
   const [periodoInput, setPeriodoInput] = useState(todayYearMonth)
   const [hoja, setHoja] = useState('')
   const [forzar, setForzar] = useState(false)
+
+  const [ultimaCarga, setUltimaCarga] = useState(null)
+  const [ultimaCargaError, setUltimaCargaError] = useState(false)
 
   const carga = useCargaArchivo()
   const { job: recalculoJob } = useJobPolling(
@@ -74,6 +90,42 @@ export default function CargaArchivos() {
   useEffect(() => {
     if (carga.tipoCarga) setSelectedTipo(carga.tipoCarga)
   }, [carga.tipoCarga])
+
+  // Consulta la última carga exitosa cada vez que cambia el tipo elegido
+  // (no se cachea entre tipos distintos).
+  useEffect(() => {
+    if (!selectedTipo) {
+      setUltimaCarga(null)
+      setUltimaCargaError(false)
+      return undefined
+    }
+    let cancelled = false
+    setUltimaCarga(null)
+    setUltimaCargaError(false)
+    apiFetch(`/carga/${selectedTipo}/ultima`)
+      .then((data) => {
+        if (!cancelled) setUltimaCarga(data)
+      })
+      .catch(() => {
+        // Informativo, no crítico: si falla, simplemente no se muestra el cuadro.
+        if (!cancelled) setUltimaCargaError(true)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedTipo])
+
+  // Refresca el dato de última carga cuando el job termina con éxito, para
+  // que el usuario lo vea actualizado sin recargar la página.
+  useEffect(() => {
+    if (carga.job?.status === 'done' && carga.job?.ok && carga.tipoCarga) {
+      apiFetch(`/carga/${carga.tipoCarga}/ultima`)
+        .then((data) => setUltimaCarga(data))
+        .catch(() => {
+          // silencioso: no bloquea el flujo de carga
+        })
+    }
+  }, [carga.job?.status, carga.job?.ok, carga.tipoCarga])
 
   const config = tipos.find((t) => t.tipo === selectedTipo) ?? null
   const isTerminalState = Boolean(carga.job) && carga.job.status !== 'running'
@@ -164,6 +216,28 @@ export default function CargaArchivos() {
               Cambiar tipo
             </button>
           </div>
+
+          {!ultimaCargaError && ultimaCarga && (
+            <div className="admin-alert admin-alert--info carga-ultima-alert">
+              <InfoOutlinedIcon />
+              {ultimaCarga.tiene_registro ? (
+                <span>
+                  Última carga: <strong>{ultimaCarga.usuario}</strong> —{' '}
+                  {formatFechaCarga(ultimaCarga.fecha)}
+                  {ultimaCarga.archivo_nombre && (
+                    <>
+                      {' '}
+                      — archivo: <em>{ultimaCarga.archivo_nombre}</em>
+                    </>
+                  )}
+                </span>
+              ) : (
+                <span>
+                  Todavía no hay registro de cargas para este tipo en esta sesión del servidor.
+                </span>
+              )}
+            </div>
+          )}
 
           <label className="login-field">
             Archivo ({config.extensiones.join(', ')})

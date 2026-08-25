@@ -28,7 +28,13 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from app.core.authz import require_mantenedor
 from app.routers import admin
 from app.schemas.auth import UserOut
-from app.schemas.carga import CargaAccepted, CargaJobOut, TipoCarga, TipoCargaOut
+from app.schemas.carga import (
+    CargaAccepted,
+    CargaJobOut,
+    TipoCarga,
+    TipoCargaOut,
+    UltimaCargaOut,
+)
 
 router = APIRouter(prefix="/carga", tags=["carga"])
 
@@ -163,6 +169,9 @@ _TIPOS_ORDEN = [
 _jobs_lock = threading.Lock()
 _jobs: dict[str, dict] = {}
 _running_by_tipo: dict[TipoCarga, str] = {}
+# Última carga exitosa por tipo_carga (memoria, no sobrevive un restart —
+# misma limitación que _jobs).
+_ultima_carga_por_tipo: dict[TipoCarga, dict] = {}
 
 
 def _now_iso() -> str:
@@ -257,6 +266,12 @@ def _ejecutar_carga(
         job["tipo_error"] = tipo_error
         job["detalle"] = detalle
         job["recalculo_job_id"] = recalculo_job_id
+        if ok:
+            _ultima_carga_por_tipo[tipo_carga] = {
+                "usuario": job.get("usuario"),
+                "archivo_nombre": job.get("archivo_nombre"),
+                "fecha": job["finished_at"],
+            }
         if _running_by_tipo.get(tipo_carga) == job_id:
             del _running_by_tipo[tipo_carga]
 
@@ -359,6 +374,7 @@ def crear_carga(
             "tipo_carga": tipo_carga,
             "archivo_nombre": nombre_original,
             "periodo": periodo_limpio,
+            "usuario": current_user.user,
             "status": "running",
             "started_at": _now_iso(),
             "finished_at": None,
@@ -375,6 +391,29 @@ def crear_carga(
     thread.start()
 
     return CargaAccepted(job_id=job_id)
+
+
+@router.get("/{tipo_carga}/ultima", response_model=UltimaCargaOut)
+def ultima_carga(tipo_carga: TipoCarga, current_user: UserOut = Depends(require_mantenedor)):
+    with _jobs_lock:
+        registro = _ultima_carga_por_tipo.get(tipo_carga)
+
+    if registro is None:
+        return UltimaCargaOut(
+            tipo_carga=tipo_carga,
+            tiene_registro=False,
+            usuario=None,
+            archivo_nombre=None,
+            fecha=None,
+        )
+
+    return UltimaCargaOut(
+        tipo_carga=tipo_carga,
+        tiene_registro=True,
+        usuario=registro.get("usuario"),
+        archivo_nombre=registro.get("archivo_nombre"),
+        fecha=registro.get("fecha"),
+    )
 
 
 @router.get("/{job_id}", response_model=CargaJobOut)
