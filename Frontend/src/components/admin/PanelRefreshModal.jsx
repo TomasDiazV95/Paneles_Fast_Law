@@ -7,6 +7,11 @@ import AutorenewIcon from '@mui/icons-material/Autorenew'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { MANDANTES } from '../../config/mandantes'
 
+// Este modal solo dispara el job de "Actualizar paneles" (SPs de cálculo).
+// CRCI todavía no participa de ese flujo (ver comentario en mandantes.js),
+// así que se excluye acá aunque sí aparezca en el selector de mandantes.
+const REFRESHABLE_MANDANTES = MANDANTES.filter((m) => m.refreshable !== false)
+
 const STATUS_LABEL = {
   running: 'En curso',
   completed: 'Completado',
@@ -73,7 +78,7 @@ function todayYearMonth() {
 export default function PanelRefreshModal({ onClose, refresh }) {
   const [periodoInput, setPeriodoInput] = useState(todayYearMonth)
   const [mandantesSeleccionados, setMandantesSeleccionados] = useState(() =>
-    MANDANTES.reduce((acc, m) => {
+    REFRESHABLE_MANDANTES.reduce((acc, m) => {
       acc[m.code.toUpperCase()] = true
       return acc
     }, {}),
@@ -160,7 +165,7 @@ export default function PanelRefreshModal({ onClose, refresh }) {
               <div className="login-field">
                 <span>Mandantes a incluir</span>
                 <div className="admin-refresh-mandantes">
-                  {MANDANTES.map((m) => {
+                  {REFRESHABLE_MANDANTES.map((m) => {
                     const code = m.code.toUpperCase()
                     return (
                       <label key={code} className="carga-checkbox-field">

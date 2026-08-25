@@ -9,6 +9,7 @@ import PanelCLA from './pages/panels/PanelCLA'
 import PanelCenco from './pages/panels/PanelCenco'
 import PanelAraucana from './pages/panels/PanelAraucana'
 import PanelUC from './pages/panels/PanelUC'
+import PanelCrci from './pages/panels/PanelCrci'
 import CargaArchivos from './pages/CargaArchivos'
 
 function ProtectedRoute({ children }) {
@@ -60,6 +61,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <PanelUC />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/panel/crci"
+        element={
+          <ProtectedRoute>
+            <PanelCrci />
           </ProtectedRoute>
         }
       />
