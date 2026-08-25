@@ -239,7 +239,20 @@ UC_STEP = next(paso for paso in _STEPS if paso["mandante"] == "UC")
 def panel_refresh(payload: PanelRefreshRequest, current_user: UserOut = Depends(require_admin)):
     periodo = _validar_periodo(payload.periodo)
 
-    job_id = iniciar_job_pasos(_STEPS, periodo)
+    if not payload.mandantes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debes seleccionar al menos un mandante",
+        )
+
+    steps_seleccionados = [paso for paso in _STEPS if paso["mandante"] in payload.mandantes]
+    if not steps_seleccionados:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debes seleccionar al menos un mandante",
+        )
+
+    job_id = iniciar_job_pasos(steps_seleccionados, periodo)
     if job_id is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

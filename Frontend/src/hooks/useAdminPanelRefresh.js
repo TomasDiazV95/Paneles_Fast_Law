@@ -80,14 +80,14 @@ export function useAdminPanelRefresh() {
     if (job && job.status !== 'running') clearStoredJob()
   }, [job])
 
-  const start = useCallback(async (periodoValue) => {
+  const start = useCallback(async (periodoValue, mandantesSeleccionados) => {
     setIsStarting(true)
     setSubmitError(null)
     setConflictNoJobId(false)
     try {
       const data = await apiFetch('/admin/panel-refresh', {
         method: 'POST',
-        body: JSON.stringify({ periodo: periodoValue }),
+        body: JSON.stringify({ periodo: periodoValue, mandantes: mandantesSeleccionados }),
       })
       setPeriodo(periodoValue)
       setJobId(data.job_id)

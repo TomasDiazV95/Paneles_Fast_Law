@@ -1016,6 +1016,17 @@ button {
   width: auto;
 }
 
+.admin-refresh-mandantes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+}
+
+.admin-refresh-mandantes-hint {
+  font-size: 12px;
+  color: #e5484d;
+}
+
 /* --- Contenido específico del modal de detalle de pagos (UC) --- */
 
 .pagos-modal-card {
