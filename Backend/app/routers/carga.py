@@ -12,6 +12,7 @@ Solo la carga `uc_pagos_unicre` encadena automáticamente, tras terminar con
 """
 
 import json
+import logging
 import os
 import re
 import subprocess
@@ -37,6 +38,9 @@ from app.schemas.carga import (
 )
 
 router = APIRouter(prefix="/carga", tags=["carga"])
+logger = logging.getLogger(__name__)
+
+_STDERR_LOG_MAX_CHARS = 2000
 
 _PERIODO_RE = re.compile(r"^\d{6}$")
 _MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
@@ -231,10 +235,19 @@ def _ejecutar_carga(
             tipo_error = None if ok else ("datos" if proceso.returncode == 2 else "infra")
         else:
             # El script no imprimió el contrato esperado: nunca exponemos
-            # stderr crudo (puede incluir detalles de conexión).
+            # stderr crudo (puede incluir detalles de conexión) al cliente,
+            # pero sí lo dejamos registrado server-side para diagnóstico.
             ok = False
             tipo_error = "infra"
             mensaje = "El proceso de carga no devolvió un resultado interpretable."
+            logger.error(
+                "Carga sin ETL_RESULT_JSON interpretable (tipo_carga=%s, job_id=%s, "
+                "returncode=%s): stderr=%s",
+                tipo_carga,
+                job_id,
+                proceso.returncode,
+                (proceso.stderr or "")[:_STDERR_LOG_MAX_CHARS],
+            )
 
     except subprocess.TimeoutExpired:
         ok = False

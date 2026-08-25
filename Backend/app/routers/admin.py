@@ -8,6 +8,7 @@ Si eso cambiara, este store debería migrar a algo compartido (tabla en BD,
 Redis, etc.).
 """
 
+import logging
 import re
 import threading
 import time
@@ -24,6 +25,7 @@ from app.schemas.admin import PanelRefreshAccepted, PanelRefreshRequest, Refresh
 from app.schemas.auth import UserOut
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+logger = logging.getLogger(__name__)
 
 _PERIODO_RE = re.compile(r"^\d{6}$")
 
@@ -186,9 +188,24 @@ def _ejecutar_job(job_id: str, periodo: str, steps: list[dict]) -> None:
             # solo la clase de error y un mensaje corto.
             error_msg = f"{type(exc.orig).__name__ if getattr(exc, 'orig', None) else type(exc).__name__}: fallo al ejecutar el SP"
             hubo_error = True
+            detalle_real = str(exc.orig) if getattr(exc, "orig", None) else str(exc)
+            logger.error(
+                "Fallo SQLAlchemyError en paso de recálculo (mandante=%s, cartera=%s, periodo=%s): %s",
+                paso["mandante"],
+                paso["cartera"],
+                periodo,
+                detalle_real,
+            )
         except Exception as exc:  # noqa: BLE001 - un paso no debe tumbar el job completo
             error_msg = "Error inesperado al ejecutar el paso"
             hubo_error = True
+            logger.error(
+                "Error inesperado en paso de recálculo (mandante=%s, cartera=%s, periodo=%s): %s",
+                paso["mandante"],
+                paso["cartera"],
+                periodo,
+                str(exc),
+            )
 
         duracion = round(time.monotonic() - inicio, 2)
 
