@@ -33,10 +33,12 @@ export default function ReprosTab({ periodo }) {
         <KpiCard label="Saldo Acumulado al Día" value={saldoAlDia.toLocaleString('es-CL')} icon={<AccountBalanceWalletIcon />} />
       </div>
 
-      <BarChartHorizontal
-        title="Total repro por clasificación"
-        data={detalle.map((r) => ({ label: r.clasificacion, value: r.total_repro }))}
-      />
+      <div className="chart-row">
+        <BarChartHorizontal
+          title="Total repro por clasificación"
+          data={detalle.map((r) => ({ label: r.clasificacion, value: r.total_repro }))}
+        />
+      </div>
 
       <p className="panel-section-title">Evolución diaria</p>
       <div className="chart-row">

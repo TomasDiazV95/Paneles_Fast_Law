@@ -48,7 +48,9 @@ function AvanceEtapaCartera({ cartera, filas }) {
           </label>
         </div>
       </div>
-      <BarChartHorizontal title={`Avance ${cartera} — ${categoria}`} data={data} height={200} />
+      <div className="chart-row">
+        <BarChartHorizontal title={`Avance ${cartera} — ${categoria}`} data={data} height={200} />
+      </div>
     </div>
   )
 }

@@ -45,7 +45,9 @@ export default function ContactabilidadTab({ periodo, cartera }) {
         <KpiCard label="Sin Gestión" value={`${resumenFila?.sin_gestion.toLocaleString('es-CL')} (${pctSinGestion}%)`} icon={<PhoneDisabledIcon />} />
       </div>
 
-      <DonutChart data={totalPorTipo} />
+      <div className="chart-row">
+        <DonutChart data={totalPorTipo} />
+      </div>
 
       <div className="panel-table-wrapper">
         <table className="panel-table">

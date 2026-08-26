@@ -33,10 +33,12 @@ export default function PagosTab({ periodo }) {
         <KpiCard label="Acumulado al Día" value={acumuladoAlDia.toLocaleString('es-CL')} icon={<TrendingUpIcon />} />
       </div>
 
-      <BarChartHorizontal
-        title="Total pagos por clasificación"
-        data={detalle.map((r) => ({ label: r.clasificacion, value: r.total_pagos }))}
-      />
+      <div className="chart-row">
+        <BarChartHorizontal
+          title="Total pagos por clasificación"
+          data={detalle.map((r) => ({ label: r.clasificacion, value: r.total_pagos }))}
+        />
+      </div>
 
       <p className="panel-section-title">Evolución diaria</p>
       <div className="chart-row">

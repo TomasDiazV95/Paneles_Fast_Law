@@ -18,19 +18,20 @@ export default function EstadoCarteraTab({ cartera }) {
   if (error) return <p className="login-error">{error}</p>
   if (!rows) return <p>Cargando...</p>
 
-  const totalJuicios = rows.reduce((sum, r) => sum + r.total_juicios, 0)
-  const totalDeudores = rows.reduce((sum, r) => sum + r.total_deudores, 0)
-  const totalCuantia = rows.reduce((sum, r) => sum + r.monto_cuantia, 0)
+  const total = rows.find((r) => r.clasificacion === 'TOTAL')
+  const detalle = rows.filter((r) => r.clasificacion !== 'TOTAL')
 
   return (
     <>
       <div className="kpi-row">
-        <KpiCard label="Total Juicios" value={totalJuicios.toLocaleString('es-CL')} icon={<FolderIcon />} highlight />
-        <KpiCard label="Total Deudores" value={totalDeudores.toLocaleString('es-CL')} icon={<GroupIcon />} />
-        <KpiCard label="Monto Cuantía" value={totalCuantia.toLocaleString('es-CL')} icon={<PaymentsIcon />} />
+        <KpiCard label="Total Juicios" value={total?.total_juicios.toLocaleString('es-CL')} icon={<FolderIcon />} highlight />
+        <KpiCard label="Total Deudores" value={total?.total_deudores.toLocaleString('es-CL')} icon={<GroupIcon />} />
+        <KpiCard label="Monto Cuantía" value={total?.monto_cuantia.toLocaleString('es-CL')} icon={<PaymentsIcon />} />
       </div>
 
-      <DonutChart data={rows.map((r) => ({ label: r.clasificacion, value: r.total_juicios }))} />
+      <div className="chart-row">
+        <DonutChart data={detalle.map((r) => ({ label: r.clasificacion, value: r.total_juicios }))} />
+      </div>
 
       <div className="panel-table-wrapper">
         <table className="panel-table">
@@ -45,7 +46,7 @@ export default function EstadoCarteraTab({ cartera }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {detalle.map((row) => (
               <tr key={row.clasificacion}>
                 <td>{row.clasificacion}</td>
                 <td className="num">{row.total_juicios.toLocaleString('es-CL')}</td>
