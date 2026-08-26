@@ -29,7 +29,9 @@ export default function EmbargoTab({ cartera }) {
         <KpiCard label="Monto Cuantía" value={total?.monto_cuantia.toLocaleString('es-CL')} icon={<PaymentsIcon />} />
       </div>
 
-      <DonutChart data={detalle.map((r) => ({ label: r.clasificacion_etapas, value: r.total_juicios }))} />
+      <div className="chart-row">
+        <DonutChart data={detalle.map((r) => ({ label: r.clasificacion_etapas, value: r.total_juicios }))} />
+      </div>
 
       <div className="panel-table-wrapper">
         <table className="panel-table">
