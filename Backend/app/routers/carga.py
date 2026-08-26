@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 _STDERR_LOG_MAX_CHARS = 2000
 
 _PERIODO_RE = re.compile(r"^\d{6}$")
-_MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
+_MAX_UPLOAD_BYTES = 500 * 1024 * 1024  # 500 MB
 _SUBPROCESS_TIMEOUT_SECONDS = 1800  # 30 min
 _CHUNK_SIZE = 1024 * 1024
 
