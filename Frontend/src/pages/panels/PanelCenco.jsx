@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import PanelTabs from '../../components/panel/PanelTabs'
-import { getPeriodoOptions } from '../../utils/periodos'
+import { apiFetch } from '../../api/client'
 import { CENCO_CARTERAS } from '../../config/cencoCarteras'
 import BusinessIcon from '@mui/icons-material/Business'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
@@ -10,8 +10,6 @@ import PagosTab from './cenco/PagosTab'
 import ReprosTab from './cenco/ReprosTab'
 import EjecutivosTab from './cenco/EjecutivosTab'
 import ComparativoTab from './cenco/ComparativoTab'
-
-const PERIODO_OPTIONS = getPeriodoOptions()
 
 const TABS = [
   { key: 'estado-cartera', label: 'Estado Cartera' },
@@ -23,11 +21,26 @@ const TABS = [
 ]
 
 export default function PanelCenco() {
-  const [periodo, setPeriodo] = useState(PERIODO_OPTIONS[0].value)
+  const [periodos, setPeriodos] = useState(null)
+  const [periodoError, setPeriodoError] = useState('')
+  const [periodo, setPeriodo] = useState(null)
   const [cartera, setCartera] = useState(CENCO_CARTERAS[0].value)
   const [tab, setTab] = useState('estado-cartera')
 
-  const periodoLabel = PERIODO_OPTIONS.find((opt) => opt.value === periodo)?.label ?? periodo
+  useEffect(() => {
+    setPeriodoError('')
+    apiFetch(`/panel/cenco/periodos?cartera=${cartera}`)
+      .then((rows) => {
+        setPeriodos(rows)
+        setPeriodo((prev) => {
+          if (prev && rows.some((r) => r.periodo === prev)) return prev
+          return rows.length ? rows[0].periodo : null
+        })
+      })
+      .catch((err) => setPeriodoError(err.message))
+  }, [cartera])
+
+  const periodoLabel = periodo ? `${periodo.slice(4)}/${periodo.slice(0, 4)}` : '—'
   const tabLabel = TABS.find((t) => t.key === tab)?.label ?? ''
 
   return (
@@ -62,29 +75,43 @@ export default function PanelCenco() {
             ))}
           </div>
 
-          <label className="panel-selector">
-            Período
-            <select value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
-              {PERIODO_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          {periodos && periodos.length > 0 && periodo && (
+            <label className="panel-selector">
+              Período
+              <select value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
+                {periodos.map((p) => (
+                  <option key={p.periodo} value={p.periodo}>
+                    {p.periodo} ({p.causas.toLocaleString('es-CL')} causas)
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
       </div>
 
-      <PanelTabs tabs={TABS} active={tab} onChange={setTab} />
+      {periodoError && <p className="login-error">{periodoError}</p>}
 
-      <div className="panel-tab-content">
-        {tab === 'estado-cartera' && <EstadoCarteraTab periodo={periodo} cartera={cartera} />}
-        {tab === 'contactabilidad' && <ContactabilidadTab periodo={periodo} cartera={cartera} />}
-        {tab === 'pagos' && <PagosTab periodo={periodo} cartera={cartera} />}
-        {tab === 'repros' && <ReprosTab periodo={periodo} cartera={cartera} />}
-        {tab === 'comparativo' && <ComparativoTab periodo={periodo} cartera={cartera} />}
-        {tab === 'ejecutivos' && <EjecutivosTab periodo={periodo} cartera={cartera} />}
-      </div>
+      {!periodoError && !periodos && <p>Cargando períodos disponibles...</p>}
+
+      {periodos && periodos.length === 0 && (
+        <p>Todavía no hay períodos procesados para esta cartera.</p>
+      )}
+
+      {periodos && periodos.length > 0 && periodo && (
+        <>
+          <PanelTabs tabs={TABS} active={tab} onChange={setTab} />
+
+          <div className="panel-tab-content">
+            {tab === 'estado-cartera' && <EstadoCarteraTab periodo={periodo} cartera={cartera} />}
+            {tab === 'contactabilidad' && <ContactabilidadTab periodo={periodo} cartera={cartera} />}
+            {tab === 'pagos' && <PagosTab periodo={periodo} cartera={cartera} />}
+            {tab === 'repros' && <ReprosTab periodo={periodo} cartera={cartera} />}
+            {tab === 'comparativo' && <ComparativoTab periodo={periodo} cartera={cartera} />}
+            {tab === 'ejecutivos' && <EjecutivosTab periodo={periodo} cartera={cartera} />}
+          </div>
+        </>
+      )}
     </div>
   )
 }

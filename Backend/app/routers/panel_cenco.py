@@ -13,6 +13,7 @@ from app.schemas.panel_cenco import (
     PagosDiarioCenco,
     PagosFilaCenco,
     PagosResponseCenco,
+    PeriodoOptionCenco,
     ReprosDiarioCenco,
     ReprosFilaCenco,
     ReprosResponseCenco,
@@ -20,6 +21,22 @@ from app.schemas.panel_cenco import (
 )
 
 router = APIRouter(prefix="/panel/cenco", tags=["panel-cenco"], dependencies=[Depends(get_current_user)])
+
+
+@router.get("/periodos", response_model=list[PeriodoOptionCenco])
+def periodos(cartera: str = "427"):
+    query = text(
+        """
+        SELECT PERIODO, COUNT(*) AS causas
+        FROM dbo.PANEL_CENCO_ESTADO_CARTERA
+        WHERE ID_CARTERA = :cartera
+        GROUP BY PERIODO
+        ORDER BY PERIODO DESC
+        """
+    )
+    with engine.connect() as conn:
+        rows = conn.execute(query, {"cartera": cartera}).mappings().all()
+    return [PeriodoOptionCenco(periodo=r["PERIODO"], causas=r["causas"]) for r in rows]
 
 
 @router.get("/estado-cartera", response_model=list[EstadoCarteraCenco])
