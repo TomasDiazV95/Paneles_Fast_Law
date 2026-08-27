@@ -144,6 +144,15 @@ CARGA_CONFIG: dict[TipoCarga, CargaConfig] = {
         permite_forzar=True,
         build_args=_args_cenco("repros"),
     ),
+    TipoCarga.cenco_salidas: CargaConfig(
+        label="CENCO · Salidas",
+        script="etl_cenco_salidas.py",
+        extensiones=(".xlsx", ".xls", ".csv"),
+        requiere_periodo=True,
+        requiere_hoja=True,
+        permite_forzar=False,
+        build_args=_args_cla_con_hoja,
+    ),
     TipoCarga.uc_pagos_unicre: CargaConfig(
         label="UC · Pagos Unicre",
         script="etl_unicre_carga_pagos.py",
@@ -162,6 +171,7 @@ _TIPOS_ORDEN = [
     TipoCarga.cla_transferencias,
     TipoCarga.cenco_pagos,
     TipoCarga.cenco_repros,
+    TipoCarga.cenco_salidas,
     TipoCarga.uc_pagos_unicre,
 ]
 
