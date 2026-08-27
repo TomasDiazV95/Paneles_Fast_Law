@@ -1,6 +1,11 @@
 from pydantic import BaseModel
 
 
+class PeriodoOptionCLA(BaseModel):
+    periodo: str
+    causas: int
+
+
 class EstadoCarteraCLA(BaseModel):
     clasificacion: str
     cantidad_causas: int

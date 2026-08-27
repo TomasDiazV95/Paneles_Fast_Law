@@ -21,6 +21,7 @@ from app.schemas.panel_cla import (
     PagosDiarioCLA,
     PagosFilaCLA,
     PagosResponseCLA,
+    PeriodoOptionCLA,
     ProductividadFilaCLA,
     ProductividadResponseCLA,
     ReprosDiarioCLA,
@@ -65,6 +66,21 @@ def _ejecutar_multi_resultset(sql: str, params: tuple) -> dict[str, list[dict]]:
         raw_conn.close()
 
 router = APIRouter(prefix="/panel/cla", tags=["panel-cla"], dependencies=[Depends(get_current_user)])
+
+
+@router.get("/periodos", response_model=list[PeriodoOptionCLA])
+def periodos():
+    query = text(
+        """
+        SELECT PERIODO, COUNT(*) AS causas
+        FROM dbo.PANEL1_ESTADO_CARTERA
+        GROUP BY PERIODO
+        ORDER BY PERIODO DESC
+        """
+    )
+    with engine.connect() as conn:
+        rows = conn.execute(query).mappings().all()
+    return [PeriodoOptionCLA(periodo=r["PERIODO"], causas=r["causas"]) for r in rows]
 
 
 @router.get("/estado-cartera", response_model=list[EstadoCarteraCLA])

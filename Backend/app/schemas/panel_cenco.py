@@ -14,6 +14,11 @@ class ComparativoFilaCenco(BaseModel):
     gestor_origen: str
 
 
+class PeriodoOptionCenco(BaseModel):
+    periodo: str
+    causas: int
+
+
 class EstadoCarteraCenco(BaseModel):
     clasificacion: str
     cantidad_causas: int
