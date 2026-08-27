@@ -487,12 +487,10 @@ def cargar_incremental(df: pd.DataFrame) -> int:
                     FROM {TABLE_NAME} t
                     WHERE {where_not_exists}
                 );
-
-                SELECT @@ROWCOUNT AS insertadas;
             """
 
             cur.execute(sql_insert)
-            insertadas = int(cur.fetchone()[0])
+            insertadas = int(cur.rowcount if cur.rowcount is not None and cur.rowcount >= 0 else 0)
             conn.commit()
             return insertadas
         except Exception:
