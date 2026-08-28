@@ -56,6 +56,7 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 @dataclass
 class CargaContext:
     archivo_path: Path
+    archivo_nombre_original: str
     periodo: Optional[str]
     hoja: Optional[str]
     forzar: bool
@@ -96,6 +97,15 @@ def _args_cenco(tipo: str) -> Callable[[CargaContext], list[str]]:
 
 def _args_uc(ctx: CargaContext) -> list[str]:
     return ["--archivo", str(ctx.archivo_path), "--periodo", ctx.periodo]
+
+
+def _args_cenco_salidas(ctx: CargaContext) -> list[str]:
+    args = ["--archivo", str(ctx.archivo_path), "--periodo", ctx.periodo]
+    if ctx.hoja:
+        args += ["--hoja", ctx.hoja]
+    if ctx.archivo_nombre_original:
+        args += ["--source-file", ctx.archivo_nombre_original]
+    return args
 
 
 CARGA_CONFIG: dict[TipoCarga, CargaConfig] = {
@@ -151,7 +161,7 @@ CARGA_CONFIG: dict[TipoCarga, CargaConfig] = {
         requiere_periodo=True,
         requiere_hoja=True,
         permite_forzar=False,
-        build_args=_args_cla_con_hoja,
+        build_args=_args_cenco_salidas,
     ),
     TipoCarga.uc_pagos_unicre: CargaConfig(
         label="UC · Pagos Unicre",
@@ -388,7 +398,11 @@ def crear_carga(
         archivo.file.close()
 
     ctx = CargaContext(
-        archivo_path=tmp_path, periodo=periodo_limpio, hoja=hoja_limpia, forzar=forzar
+        archivo_path=tmp_path,
+        archivo_nombre_original=nombre_original,
+        periodo=periodo_limpio,
+        hoja=hoja_limpia,
+        forzar=forzar,
     )
 
     with _jobs_lock:
