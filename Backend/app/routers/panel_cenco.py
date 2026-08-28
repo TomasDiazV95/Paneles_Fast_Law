@@ -1,4 +1,9 @@
-from fastapi import APIRouter, Depends
+import io
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import Response
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
 from sqlalchemy import text
 
 from app.db.database import engine
@@ -18,6 +23,7 @@ from app.schemas.panel_cenco import (
     ReprosFilaCenco,
     ReprosResponseCenco,
     ResumenContactoCenco,
+    SalidaFilaCenco,
 )
 
 router = APIRouter(prefix="/panel/cenco", tags=["panel-cenco"], dependencies=[Depends(get_current_user)])
@@ -257,3 +263,56 @@ def comparativo(periodo: str, cartera: str = "427"):
         repros = _comparativo_filas(conn, "PANEL_CENCO_COMPARATIVO_REPROS", periodo, cartera)
 
     return ComparativoResponseCenco(pagos=pagos, repros=repros)
+
+
+_SALIDAS_SP = text("EXEC dbo.SP_Panel_Cenco_Salidas @Periodo = :periodo")
+
+
+@router.get("/salidas", response_model=list[SalidaFilaCenco])
+def salidas(periodo: str):
+    with engine.connect() as conn:
+        rows = conn.execute(_SALIDAS_SP, {"periodo": int(periodo)}).mappings().all()
+
+    return [
+        SalidaFilaCenco(
+            cuenta=r["CUENTA"],
+            rut=r["RUT"],
+            operacion=r["OPERACION"],
+            numero_juicio=r["NUMERO_JUICIO"],
+            marca_glosa_abogados=r["MARCA_GLOSA_ABOGADOS"],
+            marca=r["MARCA"],
+            es_duplicado=bool(r["ES_DUPLICADO"]),
+        )
+        for r in rows
+    ]
+
+
+@router.get("/salidas/descarga")
+def salidas_descarga(periodo: str):
+    with engine.connect() as conn:
+        rows = conn.execute(_SALIDAS_SP, {"periodo": int(periodo)}).mappings().all()
+
+    if not rows:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sin datos")
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Salidas"
+    ws.append(["NUMERO_JUICIO", "MARCA"])
+    for celda in ws[1]:
+        celda.font = Font(color="FFFFFF", bold=True)
+        celda.fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    for r in rows:
+        ws.append([r["NUMERO_JUICIO"], r["MARCA"]])
+    for col in ws.columns:
+        letra = col[0].column_letter
+        ws.column_dimensions[letra].width = 22
+    ws.freeze_panes = "A2"
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=Salidas_CENCO_{periodo}.xlsx"},
+    )

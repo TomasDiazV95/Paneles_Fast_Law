@@ -368,6 +368,11 @@ button {
   background: var(--code-bg);
 }
 
+.panel-table tr.fila-duplicado td {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
 .panel-header {
   display: flex;
   flex-wrap: wrap;
@@ -780,6 +785,11 @@ button {
   background: var(--code-bg);
 }
 
+.panel-table tr.fila-duplicado td {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
 /* Estilo reforzado solo para tablas envueltas en .panel-table-wrapper (CLA) */
 
 .panel-table-wrapper .panel-table {
@@ -807,6 +817,10 @@ button {
 
 .panel-table-wrapper .panel-table tr.fila-total:hover td {
   background: var(--code-bg);
+}
+
+.panel-table-wrapper .panel-table tr.fila-duplicado:hover td {
+  background: var(--danger-bg);
 }
 
 .panel-table td.num,
