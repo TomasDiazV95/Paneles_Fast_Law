@@ -637,6 +637,10 @@ button {
   border-bottom: 1px solid var(--border);
 }
 
+.panel-heading--cencosud {
+  justify-content: center;
+}
+
 .panel-heading-title {
   display: flex;
   align-items: baseline;
