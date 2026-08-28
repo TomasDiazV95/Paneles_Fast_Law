@@ -10,6 +10,7 @@ import PagosTab from './cenco/PagosTab'
 import ReprosTab from './cenco/ReprosTab'
 import EjecutivosTab from './cenco/EjecutivosTab'
 import ComparativoTab from './cenco/ComparativoTab'
+import SalidasTab from './cenco/SalidasTab'
 
 const TABS = [
   { key: 'estado-cartera', label: 'Estado Cartera' },
@@ -18,6 +19,7 @@ const TABS = [
   { key: 'repros', label: 'Reprogramaciones' },
   { key: 'comparativo', label: 'Comparativo' },
   { key: 'ejecutivos', label: 'Ejecutivos' },
+  { key: 'salidas', label: 'Salidas' },
 ]
 
 export default function PanelCenco() {
@@ -109,6 +111,7 @@ export default function PanelCenco() {
             {tab === 'repros' && <ReprosTab periodo={periodo} cartera={cartera} />}
             {tab === 'comparativo' && <ComparativoTab periodo={periodo} cartera={cartera} />}
             {tab === 'ejecutivos' && <EjecutivosTab periodo={periodo} cartera={cartera} />}
+            {tab === 'salidas' && <SalidasTab periodo={periodo} />}
           </div>
         </>
       )}

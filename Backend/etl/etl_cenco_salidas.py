@@ -7,6 +7,7 @@ Uso interactivo:
 Uso automatizado:
     python etl_cenco_salidas.py --archivo salidas.xlsx --periodo 202608 --hoja Hoja1
     python etl_cenco_salidas.py --archivo salidas.csv --periodo 202608
+    python etl_cenco_salidas.py --archivo <tmp> --periodo 202608 --source-file Salidas_202608.xlsx
 """
 
 import argparse
@@ -92,6 +93,8 @@ BUSINESS_COLUMNS = [
     "FECHA_PROVEE_TRIBUNAL",
     "FECHA_CERTIFICACION",
 ]
+
+DEDUPE_KEY_COLUMNS = ["U6ID", "RUT", "OPERACION", "FECHA_SALIDA"]
 
 TABLE_COLUMNS = [
     "ID_PRODUCTO",
@@ -401,7 +404,7 @@ def transformar(df_origen: pd.DataFrame, periodo: str, source_file: str) -> tupl
 
     df = pd.DataFrame(registros, columns=TABLE_COLUMNS)
     antes = len(df)
-    df = df.drop_duplicates(subset=BUSINESS_COLUMNS, keep="first")
+    df = df.drop_duplicates(subset=DEDUPE_KEY_COLUMNS, keep="first")
     duplicados_en_archivo = antes - len(df)
 
     return df, duplicados_en_archivo
@@ -471,10 +474,10 @@ def cargar_incremental(df: pd.DataFrame) -> int:
 
             comparaciones = [
                 "t.[PERIODO] = s.[PERIODO]",
-                *[
-                    f"((t.[{col}] = s.[{col}]) OR (t.[{col}] IS NULL AND s.[{col}] IS NULL))"
-                    for col in BUSINESS_COLUMNS
-                ],
+                "((t.[U6ID] = s.[U6ID]) OR (t.[U6ID] IS NULL AND s.[U6ID] IS NULL))",
+                "((t.[RUT] = s.[RUT]) OR (t.[RUT] IS NULL AND s.[RUT] IS NULL))",
+                "((t.[OPERACION] = s.[OPERACION]) OR (t.[OPERACION] IS NULL AND s.[OPERACION] IS NULL))",
+                "((t.[FECHA_SALIDA] = s.[FECHA_SALIDA]) OR (t.[FECHA_SALIDA] IS NULL AND s.[FECHA_SALIDA] IS NULL))",
             ]
             where_not_exists = " AND ".join(comparaciones)
 
@@ -503,6 +506,10 @@ def main() -> None:
     parser.add_argument("--archivo", help="Ruta del archivo Excel/CSV")
     parser.add_argument("--periodo", help="Periodo en formato YYYYMM")
     parser.add_argument("--hoja", help="Nombre de hoja (solo Excel con multiples hojas)")
+    parser.add_argument(
+        "--source-file",
+        help="Nombre original del archivo cargado (opcional, para metadata SOURCE_FILE)",
+    )
     args = parser.parse_args()
 
     if args.archivo and args.periodo:
@@ -517,7 +524,7 @@ def main() -> None:
     log(f"Inicio ETL salidas CENCO | periodo={periodo}")
     log(f"Archivo: {archivo}")
 
-    source_file = os.path.basename(archivo)
+    source_file = (args.source_file or "").strip() or os.path.basename(archivo)
     df_origen = leer_archivo(archivo, hoja)
     log(f"Filas leidas: {len(df_origen)}")
 

@@ -89,3 +89,13 @@ class EjecutivoCenco(BaseModel):
 class ComparativoResponseCenco(BaseModel):
     pagos: list[ComparativoFilaCenco]
     repros: list[ComparativoFilaCenco]
+
+
+class SalidaFilaCenco(BaseModel):
+    cuenta: str
+    rut: int
+    operacion: str | None
+    numero_juicio: str | None
+    marca_glosa_abogados: str | None
+    marca: str | None
+    es_duplicado: bool

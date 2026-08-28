@@ -14,3 +14,5 @@ Backend/etl/logs/
 Backend/uploads_tmp/
 mockups/
 error_logs/*
+importtime.txt
+platform_import.txt
