@@ -47,7 +47,7 @@ export default function PanelCenco() {
 
   return (
     <div className="panel-page">
-      <div className="panel-heading">
+      <div className="panel-heading panel-heading--cencosud">
         <div className="panel-heading-title">
           <h1>Cencosud</h1>
           <span className="panel-heading-context">{tabLabel}</span>

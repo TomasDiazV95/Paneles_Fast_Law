@@ -18,7 +18,11 @@ export default function Login() {
       await login(username, password)
       navigate('/', { replace: true })
     } catch (err) {
-      setError(err.message)
+      setError(
+        err.message === 'NETWORK_ERROR'
+          ? 'No fue posible conectarse al servidor'
+          : 'Usuario o contraseña incorrectos'
+      )
     } finally {
       setIsSubmitting(false)
     }
