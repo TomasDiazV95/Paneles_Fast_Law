@@ -282,6 +282,8 @@ def salidas(periodo: str):
             marca_glosa_abogados=r["MARCA_GLOSA_ABOGADOS"],
             marca=r["MARCA"],
             es_duplicado=bool(r["ES_DUPLICADO"]),
+            fecha_salida=r["FECHA_SALIDA"],
+            casos_dia=r["CASOS_DIA"],
         )
         for r in rows
     ]

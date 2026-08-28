@@ -99,3 +99,5 @@ class SalidaFilaCenco(BaseModel):
     marca_glosa_abogados: str | None
     marca: str | None
     es_duplicado: bool
+    fecha_salida: str | None
+    casos_dia: int
