@@ -623,6 +623,33 @@ button {
   align-self: flex-start;
 }
 
+/* Leyenda compacta del semáforo (detalle de días hábiles) */
+.semaforo-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  align-self: flex-start;
+  list-style: none;
+  margin: -4px 0 4px;
+  padding: 0;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.semaforo-leyenda li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.semaforo-leyenda-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 /* --- Cabecera de panel (encabezado ejecutivo) --- */
 
 .panel-heading {

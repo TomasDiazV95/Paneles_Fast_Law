@@ -205,6 +205,21 @@ export default function SalidasTab({ periodo }) {
         ))}
       </div>
 
+      <ul className="semaforo-leyenda">
+        <li>
+          <span className="semaforo-leyenda-dot" style={{ background: COLOR_POR_CATEGORIA.verde }} />
+          Verde: hasta 2 días hábiles desde la fecha de salida
+        </li>
+        <li>
+          <span className="semaforo-leyenda-dot" style={{ background: COLOR_POR_CATEGORIA.amarillo }} />
+          Amarillo: entre 3 y 4 días hábiles desde la fecha de salida
+        </li>
+        <li>
+          <span className="semaforo-leyenda-dot" style={{ background: COLOR_POR_CATEGORIA.rojo }} />
+          Rojo: más de 4 días hábiles desde la fecha de salida
+        </li>
+      </ul>
+
       <div className="panel-toolbar-actions">
         <button type="button" className="panel-download-btn" onClick={descargar}>
           <FileDownloadIcon /> Descargar Salidas
