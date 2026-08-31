@@ -11,6 +11,7 @@ class TipoCarga(str, Enum):
     cenco_pagos = "cenco_pagos"
     cenco_repros = "cenco_repros"
     cenco_salidas = "cenco_salidas"
+    cenco_stock = "cenco_stock"
     uc_pagos_unicre = "uc_pagos_unicre"
 
 
