@@ -99,7 +99,9 @@ def _args_uc(ctx: CargaContext) -> list[str]:
     return ["--archivo", str(ctx.archivo_path), "--periodo", ctx.periodo]
 
 
-def _args_cenco_salidas(ctx: CargaContext) -> list[str]:
+def _args_periodo_hoja_source(ctx: CargaContext) -> list[str]:
+    # Compartido por los ETL que aceptan --archivo/--periodo/--hoja/--source-file
+    # (etl_cenco_salidas.py y etl_cenco_stock.py siguen el mismo patrón de CLI).
     args = ["--archivo", str(ctx.archivo_path), "--periodo", ctx.periodo]
     if ctx.hoja:
         args += ["--hoja", ctx.hoja]
@@ -161,7 +163,16 @@ CARGA_CONFIG: dict[TipoCarga, CargaConfig] = {
         requiere_periodo=True,
         requiere_hoja=True,
         permite_forzar=False,
-        build_args=_args_cenco_salidas,
+        build_args=_args_periodo_hoja_source,
+    ),
+    TipoCarga.cenco_stock: CargaConfig(
+        label="CENCO · Stock",
+        script="etl_cenco_stock.py",
+        extensiones=(".xlsx", ".xls", ".csv"),
+        requiere_periodo=True,
+        requiere_hoja=True,
+        permite_forzar=False,
+        build_args=_args_periodo_hoja_source,
     ),
     TipoCarga.uc_pagos_unicre: CargaConfig(
         label="UC · Pagos Unicre",
@@ -182,6 +193,7 @@ _TIPOS_ORDEN = [
     TipoCarga.cenco_pagos,
     TipoCarga.cenco_repros,
     TipoCarga.cenco_salidas,
+    TipoCarga.cenco_stock,
     TipoCarga.uc_pagos_unicre,
 ]
 
