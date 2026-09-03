@@ -46,6 +46,9 @@ _PERIODO_RE = re.compile(r"^\d{6}$")
 _MAX_UPLOAD_BYTES = 500 * 1024 * 1024  # 500 MB
 _SUBPROCESS_TIMEOUT_SECONDS = 1800  # 30 min
 _CHUNK_SIZE = 1024 * 1024
+# Límite de archivos por solicitud para tipos con permite_multiples_archivos=True
+# (hoy solo cenco_autoges). Los tipos single-file siguen exigiendo exactamente 1.
+_MAX_ARCHIVOS_MULTIPLES = 5
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 ETL_DIR = BACKEND_DIR / "etl"
@@ -55,11 +58,15 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 @dataclass
 class CargaContext:
-    archivo_path: Path
-    archivo_nombre_original: str
+    # Listas siempre alineadas por posición: archivo_paths[i] corresponde a
+    # archivo_nombres_originales[i] y hojas[i]. Para los tipos single-file
+    # (permite_multiples_archivos=False) estas listas siempre tienen 1 elemento.
+    archivo_paths: list[Path]
+    archivo_nombres_originales: list[str]
     periodo: Optional[str]
-    hoja: Optional[str]
+    hojas: list[Optional[str]]
     forzar: bool
+    limpiar_periodo: bool
 
 
 @dataclass
@@ -70,24 +77,27 @@ class CargaConfig:
     requiere_periodo: bool
     requiere_hoja: bool
     permite_forzar: bool
+    permite_multiples_archivos: bool
+    permite_limpiar_periodo: bool
     build_args: Callable[[CargaContext], list[str]]
 
 
 def _args_base_ofertas(ctx: CargaContext) -> list[str]:
     # etl_base_oferta_cla.py usa argumentos posicionales, no flags.
-    return [str(ctx.archivo_path), ctx.periodo]
+    return [str(ctx.archivo_paths[0]), ctx.periodo]
 
 
 def _args_cla_con_hoja(ctx: CargaContext) -> list[str]:
-    args = ["--archivo", str(ctx.archivo_path), "--periodo", ctx.periodo]
-    if ctx.hoja:
-        args += ["--hoja", ctx.hoja]
+    args = ["--archivo", str(ctx.archivo_paths[0]), "--periodo", ctx.periodo]
+    hoja = ctx.hojas[0]
+    if hoja:
+        args += ["--hoja", hoja]
     return args
 
 
 def _args_cenco(tipo: str) -> Callable[[CargaContext], list[str]]:
     def _build(ctx: CargaContext) -> list[str]:
-        args = ["--tipo", tipo, "--archivo", str(ctx.archivo_path)]
+        args = ["--tipo", tipo, "--archivo", str(ctx.archivo_paths[0])]
         if ctx.forzar:
             args.append("--forzar")
         return args
@@ -96,17 +106,46 @@ def _args_cenco(tipo: str) -> Callable[[CargaContext], list[str]]:
 
 
 def _args_uc(ctx: CargaContext) -> list[str]:
-    return ["--archivo", str(ctx.archivo_path), "--periodo", ctx.periodo]
+    return ["--archivo", str(ctx.archivo_paths[0]), "--periodo", ctx.periodo]
 
 
 def _args_periodo_hoja_source(ctx: CargaContext) -> list[str]:
     # Compartido por los ETL que aceptan --archivo/--periodo/--hoja/--source-file
     # (etl_cenco_salidas.py y etl_cenco_stock.py siguen el mismo patrón de CLI).
-    args = ["--archivo", str(ctx.archivo_path), "--periodo", ctx.periodo]
-    if ctx.hoja:
-        args += ["--hoja", ctx.hoja]
-    if ctx.archivo_nombre_original:
-        args += ["--source-file", ctx.archivo_nombre_original]
+    args = ["--archivo", str(ctx.archivo_paths[0]), "--periodo", ctx.periodo]
+    hoja = ctx.hojas[0]
+    if hoja:
+        args += ["--hoja", hoja]
+    nombre_original = ctx.archivo_nombres_originales[0]
+    if nombre_original:
+        args += ["--source-file", nombre_original]
+    return args
+
+
+def _args_cenco_autoges(ctx: CargaContext) -> list[str]:
+    # etl_cenco_autoges.py acepta --archivo repetible, con --hoja y
+    # --source-file asociados por POSICIÓN a cada --archivo. Si se usa --hoja,
+    # el ETL exige una entrada por cada --archivo (ver resolver_argumentos), y
+    # un archivo .csv no admite --hoja en absoluto (ni siquiera "" vacío: ver
+    # leer_archivo, que rechaza cualquier valor no-None para CSV). Por eso acá
+    # solo emitimos --hoja si el usuario indicó hoja para TODOS los archivos Y
+    # ninguno de ellos es CSV; en cualquier otro caso omitimos --hoja por
+    # completo y dejamos que el ETL auto-resuelva la hoja de cada Excel de una
+    # sola hoja (fallará como error de datos, no como crash, si algún Excel
+    # multi-hoja queda sin resolver).
+    hay_csv = any(path.suffix.lower() == ".csv" for path in ctx.archivo_paths)
+    hoja_solicitada = any(hoja is not None for hoja in ctx.hojas)
+    incluir_hoja = hoja_solicitada and not hay_csv
+
+    args = ["--periodo", ctx.periodo]
+    for idx, path in enumerate(ctx.archivo_paths):
+        args += ["--archivo", str(path)]
+        if incluir_hoja:
+            args += ["--hoja", ctx.hojas[idx] or ""]
+    for nombre_original in ctx.archivo_nombres_originales:
+        args += ["--source-file", nombre_original]
+    if ctx.limpiar_periodo:
+        args.append("--limpiar-periodo")
     return args
 
 
@@ -118,6 +157,8 @@ CARGA_CONFIG: dict[TipoCarga, CargaConfig] = {
         requiere_periodo=True,
         requiere_hoja=False,
         permite_forzar=False,
+        permite_multiples_archivos=False,
+        permite_limpiar_periodo=False,
         build_args=_args_base_ofertas,
     ),
     TipoCarga.cla_rl: CargaConfig(
@@ -127,6 +168,8 @@ CARGA_CONFIG: dict[TipoCarga, CargaConfig] = {
         requiere_periodo=True,
         requiere_hoja=True,
         permite_forzar=False,
+        permite_multiples_archivos=False,
+        permite_limpiar_periodo=False,
         build_args=_args_cla_con_hoja,
     ),
     TipoCarga.cla_transferencias: CargaConfig(
@@ -136,6 +179,8 @@ CARGA_CONFIG: dict[TipoCarga, CargaConfig] = {
         requiere_periodo=True,
         requiere_hoja=True,
         permite_forzar=False,
+        permite_multiples_archivos=False,
+        permite_limpiar_periodo=False,
         build_args=_args_cla_con_hoja,
     ),
     TipoCarga.cenco_pagos: CargaConfig(
@@ -145,6 +190,8 @@ CARGA_CONFIG: dict[TipoCarga, CargaConfig] = {
         requiere_periodo=False,
         requiere_hoja=False,
         permite_forzar=True,
+        permite_multiples_archivos=False,
+        permite_limpiar_periodo=False,
         build_args=_args_cenco("pagos"),
     ),
     TipoCarga.cenco_repros: CargaConfig(
@@ -154,6 +201,8 @@ CARGA_CONFIG: dict[TipoCarga, CargaConfig] = {
         requiere_periodo=False,
         requiere_hoja=False,
         permite_forzar=True,
+        permite_multiples_archivos=False,
+        permite_limpiar_periodo=False,
         build_args=_args_cenco("repros"),
     ),
     TipoCarga.cenco_salidas: CargaConfig(
@@ -163,6 +212,8 @@ CARGA_CONFIG: dict[TipoCarga, CargaConfig] = {
         requiere_periodo=True,
         requiere_hoja=True,
         permite_forzar=False,
+        permite_multiples_archivos=False,
+        permite_limpiar_periodo=False,
         build_args=_args_periodo_hoja_source,
     ),
     TipoCarga.cenco_stock: CargaConfig(
@@ -172,7 +223,20 @@ CARGA_CONFIG: dict[TipoCarga, CargaConfig] = {
         requiere_periodo=True,
         requiere_hoja=True,
         permite_forzar=False,
+        permite_multiples_archivos=False,
+        permite_limpiar_periodo=False,
         build_args=_args_periodo_hoja_source,
+    ),
+    TipoCarga.cenco_autoges: CargaConfig(
+        label="CENCO · Autogestión",
+        script="etl_cenco_autoges.py",
+        extensiones=(".xlsx", ".xls", ".csv"),
+        requiere_periodo=True,
+        requiere_hoja=True,
+        permite_forzar=False,
+        permite_multiples_archivos=True,
+        permite_limpiar_periodo=True,
+        build_args=_args_cenco_autoges,
     ),
     TipoCarga.uc_pagos_unicre: CargaConfig(
         label="UC · Pagos Unicre",
@@ -181,6 +245,8 @@ CARGA_CONFIG: dict[TipoCarga, CargaConfig] = {
         requiere_periodo=True,
         requiere_hoja=False,
         permite_forzar=False,
+        permite_multiples_archivos=False,
+        permite_limpiar_periodo=False,
         build_args=_args_uc,
     ),
 }
@@ -194,6 +260,7 @@ _TIPOS_ORDEN = [
     TipoCarga.cenco_repros,
     TipoCarga.cenco_salidas,
     TipoCarga.cenco_stock,
+    TipoCarga.cenco_autoges,
     TipoCarga.uc_pagos_unicre,
 ]
 
@@ -290,10 +357,11 @@ def _ejecutar_carga(
         tipo_error = "infra"
         mensaje = "Error inesperado al ejecutar la carga."
     finally:
-        try:
-            ctx.archivo_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+        for archivo_path in ctx.archivo_paths:
+            try:
+                archivo_path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     recalculo_job_id: Optional[str] = None
     if ok and tipo_carga == TipoCarga.uc_pagos_unicre:
@@ -331,6 +399,8 @@ def listar_tipos(current_user: UserOut = Depends(require_mantenedor)):
             requiere_periodo=CARGA_CONFIG[tipo].requiere_periodo,
             requiere_hoja=CARGA_CONFIG[tipo].requiere_hoja,
             permite_forzar=CARGA_CONFIG[tipo].permite_forzar,
+            permite_multiples_archivos=CARGA_CONFIG[tipo].permite_multiples_archivos,
+            permite_limpiar_periodo=CARGA_CONFIG[tipo].permite_limpiar_periodo,
         )
         for tipo in _TIPOS_ORDEN
     ]
@@ -339,25 +409,49 @@ def listar_tipos(current_user: UserOut = Depends(require_mantenedor)):
 @router.post("/{tipo_carga}", response_model=CargaAccepted, status_code=status.HTTP_202_ACCEPTED)
 def crear_carga(
     tipo_carga: TipoCarga,
-    archivo: UploadFile = File(...),
+    archivo: list[UploadFile] = File(...),
     periodo: Optional[str] = Form(None),
-    hoja: Optional[str] = Form(None),
+    hoja: Optional[list[str]] = Form(None),
     forzar: bool = Form(False),
+    limpiar_periodo: bool = Form(False),
     current_user: UserOut = Depends(require_mantenedor),
 ):
     config = CARGA_CONFIG[tipo_carga]
 
-    nombre_original = archivo.filename or ""
-    extension = Path(nombre_original).suffix.lower()
-    if extension not in config.extensiones:
+    if not archivo:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"Extensión no permitida para {config.label}: "
-                f"'{extension or '(sin extensión)'}'. "
-                f"Extensiones permitidas: {', '.join(config.extensiones)}."
-            ),
+            detail="Debe adjuntar al menos un archivo.",
         )
+
+    if config.permite_multiples_archivos:
+        if len(archivo) > _MAX_ARCHIVOS_MULTIPLES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"{config.label} admite como máximo "
+                    f"{_MAX_ARCHIVOS_MULTIPLES} archivos por carga."
+                ),
+            )
+    elif len(archivo) != 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{config.label} admite exactamente un archivo por carga.",
+        )
+
+    nombres_originales = [uploaded.filename or "" for uploaded in archivo]
+    extensiones = [Path(nombre).suffix.lower() for nombre in nombres_originales]
+    for nombre, extension in zip(nombres_originales, extensiones):
+        if extension not in config.extensiones:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Extensión no permitida para {config.label}: "
+                    f"'{extension or '(sin extensión)'}' (archivo: "
+                    f"'{nombre or '(sin nombre)'}'). "
+                    f"Extensiones permitidas: {', '.join(config.extensiones)}."
+                ),
+            )
 
     periodo_limpio: Optional[str] = None
     if config.requiere_periodo:
@@ -373,7 +467,30 @@ def crear_carga(
             )
         periodo_limpio = periodo
 
-    hoja_limpia = hoja.strip() if hoja and hoja.strip() else None
+    if hoja is not None:
+        if len(hoja) != len(archivo):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Si se especifica 'hoja', debe indicarse exactamente una "
+                    "por cada archivo adjunto, en el mismo orden."
+                ),
+            )
+        hojas_limpias: list[Optional[str]] = [
+            valor.strip() if valor and valor.strip() else None for valor in hoja
+        ]
+        for nombre, valor_hoja, extension in zip(nombres_originales, hojas_limpias, extensiones):
+            if valor_hoja and extension == ".csv":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"El archivo '{nombre}' es CSV y no admite el parámetro "
+                        "'hoja'. Los archivos CSV no tienen hojas; no incluya "
+                        "'hoja' para ellos."
+                    ),
+                )
+    else:
+        hojas_limpias = [None] * len(archivo)
 
     with _jobs_lock:
         job_en_curso = _running_by_tipo.get(tipo_carga)
@@ -385,43 +502,54 @@ def crear_carga(
         job_id = str(uuid4())
         _running_by_tipo[tipo_carga] = job_id
 
-    tmp_path = UPLOADS_DIR / f"{job_id}{extension}"
-    tamano = 0
+    archivo_paths: list[Path] = []
     try:
-        with open(tmp_path, "wb") as destino:
-            while True:
-                chunk = archivo.file.read(_CHUNK_SIZE)
-                if not chunk:
-                    break
-                tamano += len(chunk)
-                if tamano > _MAX_UPLOAD_BYTES:
-                    raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail="El archivo excede el tamaño máximo permitido (50 MB)",
-                    )
-                destino.write(chunk)
+        for idx, (uploaded, extension) in enumerate(zip(archivo, extensiones)):
+            tmp_path = UPLOADS_DIR / f"{job_id}_{idx}{extension}"
+            archivo_paths.append(tmp_path)
+            tamano = 0
+            with open(tmp_path, "wb") as destino:
+                while True:
+                    chunk = uploaded.file.read(_CHUNK_SIZE)
+                    if not chunk:
+                        break
+                    tamano += len(chunk)
+                    if tamano > _MAX_UPLOAD_BYTES:
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail=(
+                                f"El archivo '{nombres_originales[idx]}' excede "
+                                "el tamaño máximo permitido (500 MB)"
+                            ),
+                        )
+                    destino.write(chunk)
     except HTTPException:
-        tmp_path.unlink(missing_ok=True)
+        for archivo_path in archivo_paths:
+            archivo_path.unlink(missing_ok=True)
         with _jobs_lock:
             if _running_by_tipo.get(tipo_carga) == job_id:
                 del _running_by_tipo[tipo_carga]
         raise
     finally:
-        archivo.file.close()
+        for uploaded in archivo:
+            uploaded.file.close()
 
     ctx = CargaContext(
-        archivo_path=tmp_path,
-        archivo_nombre_original=nombre_original,
+        archivo_paths=archivo_paths,
+        archivo_nombres_originales=nombres_originales,
         periodo=periodo_limpio,
-        hoja=hoja_limpia,
+        hojas=hojas_limpias,
         forzar=forzar,
+        limpiar_periodo=limpiar_periodo,
     )
+
+    archivo_nombre_job = ", ".join(nombre for nombre in nombres_originales if nombre)
 
     with _jobs_lock:
         _jobs[job_id] = {
             "job_id": job_id,
             "tipo_carga": tipo_carga,
-            "archivo_nombre": nombre_original,
+            "archivo_nombre": archivo_nombre_job,
             "periodo": periodo_limpio,
             "usuario": current_user.user,
             "status": "running",

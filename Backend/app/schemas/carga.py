@@ -12,6 +12,7 @@ class TipoCarga(str, Enum):
     cenco_repros = "cenco_repros"
     cenco_salidas = "cenco_salidas"
     cenco_stock = "cenco_stock"
+    cenco_autoges = "cenco_autoges"
     uc_pagos_unicre = "uc_pagos_unicre"
 
 
@@ -26,6 +27,15 @@ class TipoCargaOut(BaseModel):
     requiere_periodo: bool
     requiere_hoja: bool
     permite_forzar: bool
+    # Si el tipo de carga acepta 1..N archivos en una misma solicitud (ej.
+    # cenco_autoges, donde el usuario puede subir varios archivos del mismo
+    # período en cargas separadas o en una sola). Distinto de `permite_forzar`,
+    # que controla "ignorar protección de doble carga el mismo día".
+    permite_multiples_archivos: bool
+    # Si el tipo expone el control de "borrar el período antes de cargar"
+    # (DELETE previo por PERIODO) en vez de (o además de) la carga incremental
+    # con dedupe. Distinto de `permite_forzar`.
+    permite_limpiar_periodo: bool
 
 
 class CargaAccepted(BaseModel):
@@ -35,6 +45,10 @@ class CargaAccepted(BaseModel):
 class CargaJobOut(BaseModel):
     job_id: str
     tipo_carga: TipoCarga
+    # Para cargas multi-archivo (permite_multiples_archivos=True) se concatenan
+    # los nombres originales de todos los archivos subidos, separados por ", ".
+    # Para cargas de un solo archivo (todos los demás tipos) es el nombre tal
+    # cual, sin cambios de comportamiento respecto al contrato previo.
     archivo_nombre: str
     periodo: Optional[str] = None
     status: CargaJobStatus

@@ -1378,3 +1378,79 @@ button {
   padding-left: 18px;
   font-size: 13px;
 }
+
+.carga-archivos-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.carga-archivos-list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.carga-archivos-list-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text-h);
+}
+
+.carga-archivos-list-hoja-csv {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.carga-archivos-list-hoja-input {
+  flex: 0 0 160px;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-h);
+}
+
+.carga-archivos-list-hoja-input:focus {
+  outline: none;
+  border-color: var(--accent-border);
+}
+
+.carga-archivos-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.carga-archivos-error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--danger);
+}
+
+.carga-checkbox-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.carga-checkbox-hint {
+  margin: 0 0 0 24px;
+  font-size: 12px;
+  color: var(--text);
+}

@@ -3,9 +3,12 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ErrorIcon from '@mui/icons-material/Error'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import CloseIcon from '@mui/icons-material/Close'
 import { apiFetch } from '../api/client'
 import { useCargaArchivo } from '../hooks/useCargaArchivo'
 import { useJobPolling } from '../hooks/useJobPolling'
+
+const MAX_ARCHIVOS_MULTIPLES = 5
 
 const STATUS_LABEL = {
   running: 'En curso',
@@ -55,9 +58,13 @@ export default function CargaArchivos() {
   const [selectedTipo, setSelectedTipo] = useState(null)
 
   const [archivo, setArchivo] = useState(null)
+  const [archivosMultiples, setArchivosMultiples] = useState([])
+  const [hojasMultiples, setHojasMultiples] = useState([])
+  const [archivosMultiplesError, setArchivosMultiplesError] = useState(null)
   const [periodoInput, setPeriodoInput] = useState(todayYearMonth)
   const [hoja, setHoja] = useState('')
   const [forzar, setForzar] = useState(false)
+  const [limpiarPeriodo, setLimpiarPeriodo] = useState(false)
 
   const [ultimaCarga, setUltimaCarga] = useState(null)
   const [ultimaCargaError, setUltimaCargaError] = useState(false)
@@ -132,9 +139,44 @@ export default function CargaArchivos() {
 
   function resetForm() {
     setArchivo(null)
+    setArchivosMultiples([])
+    setHojasMultiples([])
+    setArchivosMultiplesError(null)
     setPeriodoInput(todayYearMonth())
     setHoja('')
     setForzar(false)
+    setLimpiarPeriodo(false)
+  }
+
+  function handleArchivosMultiplesChange(e) {
+    const nuevos = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    if (nuevos.length === 0) return
+
+    const disponibles = MAX_ARCHIVOS_MULTIPLES - archivosMultiples.length
+    if (disponibles <= 0) {
+      setArchivosMultiplesError(`Ya seleccionaste el máximo de ${MAX_ARCHIVOS_MULTIPLES} archivos permitidos.`)
+      return
+    }
+
+    const aAgregar = nuevos.slice(0, disponibles)
+    setArchivosMultiplesError(
+      nuevos.length > disponibles
+        ? `Solo se agregaron ${aAgregar.length} archivo(s); el máximo permitido es ${MAX_ARCHIVOS_MULTIPLES}.`
+        : null,
+    )
+    setArchivosMultiples((prev) => [...prev, ...aAgregar])
+    setHojasMultiples((prev) => [...prev, ...aAgregar.map(() => '')])
+  }
+
+  function handleQuitarArchivoMultiple(index) {
+    setArchivosMultiples((prev) => prev.filter((_, i) => i !== index))
+    setHojasMultiples((prev) => prev.filter((_, i) => i !== index))
+    setArchivosMultiplesError(null)
+  }
+
+  function handleHojaMultipleChange(index, value) {
+    setHojasMultiples((prev) => prev.map((v, i) => (i === index ? value : v)))
   }
 
   function handleSelectTipo(tipo) {
@@ -155,18 +197,42 @@ export default function CargaArchivos() {
 
   function handleSubmit(e) {
     e.preventDefault()
-    if (!config || !archivo) return
+    if (!config) return
+
+    const esMultiple = config.permite_multiples_archivos
+    const archivosAEnviar = esMultiple ? archivosMultiples : archivo ? [archivo] : []
+    if (archivosAEnviar.length === 0) return
 
     const formData = new FormData()
-    formData.append('archivo', archivo)
+    archivosAEnviar.forEach((file) => formData.append('archivo', file))
+
     if (config.requiere_periodo) {
       formData.append('periodo', periodoInput.replace('-', ''))
     }
-    if (config.requiere_hoja && hoja.trim()) {
-      formData.append('hoja', hoja.trim())
+
+    if (config.requiere_hoja) {
+      if (esMultiple) {
+        // Una entrada de "hoja" por archivo, en el mismo orden posicional.
+        // Los CSV nunca llevan hoja (el backend rechaza cualquier valor no
+        // vacío para ellos).
+        const hojasAEnviar = archivosAEnviar.map((file, index) => {
+          if (file.name.toLowerCase().endsWith('.csv')) return ''
+          return (hojasMultiples[index] ?? '').trim()
+        })
+        if (hojasAEnviar.some((valor) => valor !== '')) {
+          hojasAEnviar.forEach((valor) => formData.append('hoja', valor))
+        }
+      } else if (hoja.trim()) {
+        formData.append('hoja', hoja.trim())
+      }
     }
+
     if (config.permite_forzar) {
       formData.append('forzar', forzar ? 'true' : 'false')
+    }
+
+    if (config.permite_limpiar_periodo) {
+      formData.append('limpiar_periodo', limpiarPeriodo ? 'true' : 'false')
     }
 
     carga.start(config.tipo, formData)
@@ -174,8 +240,17 @@ export default function CargaArchivos() {
 
   const periodoValue = periodoInput.replace('-', '')
   const periodoValido = !config?.requiere_periodo || /^\d{6}$/.test(periodoValue)
+  const archivosSeleccionados = config?.permite_multiples_archivos
+    ? archivosMultiples
+    : archivo
+      ? [archivo]
+      : []
   const submitDisabled =
-    !archivo || !periodoValido || carga.isStarting || carga.isRunning || carga.conflictNoJobId
+    archivosSeleccionados.length === 0 ||
+    !periodoValido ||
+    carga.isStarting ||
+    carga.isRunning ||
+    carga.conflictNoJobId
 
   const status = carga.job?.status ?? 'running'
 
@@ -239,15 +314,70 @@ export default function CargaArchivos() {
             </div>
           )}
 
-          <label className="login-field">
-            Archivo ({config.extensiones.join(', ')})
-            <input
-              type="file"
-              accept={config.extensiones.join(',')}
-              onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
-              required
-            />
-          </label>
+          {config.permite_multiples_archivos ? (
+            <div className="login-field">
+              <span>
+                Archivos ({config.extensiones.join(', ')}) — de 1 a {MAX_ARCHIVOS_MULTIPLES}
+              </span>
+              <input
+                type="file"
+                accept={config.extensiones.join(',')}
+                multiple
+                onChange={handleArchivosMultiplesChange}
+              />
+
+              {archivosMultiples.length > 0 && (
+                <ul className="carga-archivos-list">
+                  {archivosMultiples.map((file, index) => {
+                    const esCsv = file.name.toLowerCase().endsWith('.csv')
+                    return (
+                      <li key={`${file.name}-${index}`} className="carga-archivos-list-item">
+                        <span className="carga-archivos-list-name" title={file.name}>
+                          {file.name}
+                        </span>
+                        {config.requiere_hoja &&
+                          (esCsv ? (
+                            <span className="carga-archivos-list-hoja-csv">CSV (sin hoja)</span>
+                          ) : (
+                            <input
+                              type="text"
+                              className="carga-archivos-list-hoja-input"
+                              value={hojasMultiples[index] ?? ''}
+                              onChange={(e) => handleHojaMultipleChange(index, e.target.value)}
+                              placeholder="Hoja (opcional)"
+                              aria-label={`Hoja para ${file.name}`}
+                            />
+                          ))}
+                        <button
+                          type="button"
+                          className="modal-close-btn"
+                          aria-label={`Quitar ${file.name}`}
+                          onClick={() => handleQuitarArchivoMultiple(index)}
+                        >
+                          <CloseIcon />
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+
+              {archivosMultiples.length === 0 && (
+                <p className="carga-archivos-hint">Selecciona entre 1 y {MAX_ARCHIVOS_MULTIPLES} archivos.</p>
+              )}
+              {archivosMultiplesError && <p className="carga-archivos-error">{archivosMultiplesError}</p>}
+            </div>
+          ) : (
+            <label className="login-field">
+              Archivo ({config.extensiones.join(', ')})
+              <input
+                type="file"
+                accept={config.extensiones.join(',')}
+                onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+                required
+              />
+            </label>
+          )}
 
           {config.requiere_periodo && (
             <label className="login-field">
@@ -261,7 +391,7 @@ export default function CargaArchivos() {
             </label>
           )}
 
-          {config.requiere_hoja && (
+          {config.requiere_hoja && !config.permite_multiples_archivos && (
             <label className="login-field">
               Hoja (opcional)
               <input
@@ -282,6 +412,25 @@ export default function CargaArchivos() {
               />
               Forzar recarga (ignora protección de doble carga del mismo día)
             </label>
+          )}
+
+          {config.permite_limpiar_periodo && (
+            <div className="carga-checkbox-field-group">
+              <label className="carga-checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={limpiarPeriodo}
+                  onChange={(e) => setLimpiarPeriodo(e.target.checked)}
+                />
+                Eliminar los registros existentes de este período antes de cargar
+              </label>
+              <p className="carga-checkbox-hint">
+                Por defecto la carga es incremental y no borra nada. Usa esta opción solo en la
+                primera carga de un período nuevo, o para recargar todo desde cero. Si vas a
+                subir un segundo archivo del mismo período, no marques esta opción: borraría lo
+                ya cargado por el primer archivo.
+              </p>
+            </div>
           )}
 
           {carga.submitError && (
