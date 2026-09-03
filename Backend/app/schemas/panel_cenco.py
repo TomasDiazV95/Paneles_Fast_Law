@@ -101,3 +101,25 @@ class SalidaFilaCenco(BaseModel):
     es_duplicado: bool
     fecha_salida: str | None
     casos_dia: int
+
+
+class EstadoCyberResumenCenco(BaseModel):
+    q_actualizado: int
+    q_no_actualizado: int
+    q_total: int
+
+
+class EstadoCyberFilaCenco(BaseModel):
+    rut: int | None
+    dv: str | None
+    u6id: str | None
+    operacion: str | None
+    tipo_de_cuenta: str | None
+    rsp_auto_ges: str | None
+    resp_jfastco: str | None
+    estado: str
+
+
+class EstadoCyberResponseCenco(BaseModel):
+    resumen: EstadoCyberResumenCenco
+    filas: list[EstadoCyberFilaCenco]

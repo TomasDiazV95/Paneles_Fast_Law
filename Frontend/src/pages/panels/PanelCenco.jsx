@@ -11,6 +11,7 @@ import ReprosTab from './cenco/ReprosTab'
 import EjecutivosTab from './cenco/EjecutivosTab'
 import ComparativoTab from './cenco/ComparativoTab'
 import SalidasTab from './cenco/SalidasTab'
+import EstadoCyberTab from './cenco/EstadoCyberTab'
 
 const TABS = [
   { key: 'estado-cartera', label: 'Estado Cartera' },
@@ -20,6 +21,7 @@ const TABS = [
   { key: 'comparativo', label: 'Comparativo' },
   { key: 'ejecutivos', label: 'Ejecutivos' },
   { key: 'salidas', label: 'Salidas' },
+  { key: 'estado-cyber', label: 'Estado Cyber' },
 ]
 
 export default function PanelCenco() {
@@ -112,6 +114,7 @@ export default function PanelCenco() {
             {tab === 'comparativo' && <ComparativoTab periodo={periodo} cartera={cartera} />}
             {tab === 'ejecutivos' && <EjecutivosTab periodo={periodo} cartera={cartera} />}
             {tab === 'salidas' && <SalidasTab periodo={periodo} />}
+            {tab === 'estado-cyber' && <EstadoCyberTab periodo={periodo} />}
           </div>
         </>
       )}
