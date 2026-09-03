@@ -15,6 +15,9 @@ from app.schemas.panel_cenco import (
     ContactabilidadResponseCenco,
     EjecutivoCenco,
     EstadoCarteraCenco,
+    EstadoCyberFilaCenco,
+    EstadoCyberResponseCenco,
+    EstadoCyberResumenCenco,
     PagosDiarioCenco,
     PagosFilaCenco,
     PagosResponseCenco,
@@ -27,6 +30,62 @@ from app.schemas.panel_cenco import (
 )
 
 router = APIRouter(prefix="/panel/cenco", tags=["panel-cenco"], dependencies=[Depends(get_current_user)])
+
+
+_ESTADOS_CYBER_VALIDOS = {"ACTUALIZADO", "NO ACTUALIZADO"}
+
+
+def _validar_estado_cyber(estado: str | None) -> str | None:
+    """Normaliza y valida el filtro `estado` de Estado Cyber CENCO.
+
+    Acepta None/vacio (sin filtro, trae todos los estados) o uno de los
+    valores que reconoce el SP (`ACTUALIZADO` / `NO ACTUALIZADO`). Cualquier
+    otro valor se rechaza con 400 para no dejar pasar strings arbitrarios
+    hacia el parametro @Estado del SP.
+    """
+    if estado is None or not estado.strip():
+        return None
+    estado_normalizado = estado.strip().upper()
+    if estado_normalizado not in _ESTADOS_CYBER_VALIDOS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="estado invalido. Valores permitidos: ACTUALIZADO, NO ACTUALIZADO.",
+        )
+    return estado_normalizado
+
+
+def _ejecutar_estado_cyber(
+    periodo: str, producto: int, estado: str | None
+) -> tuple[dict, list[dict]]:
+    """Ejecuta SP_Panel_Cenco_Estado_Cyber (dos result sets: resumen y detalle
+    completo, sin paginar) usando una conexion raw + cursor.nextset(), ya que
+    SQLAlchemy no expone result sets adicionales de un EXEC via `text()`."""
+    raw_conn = engine.raw_connection()
+    try:
+        cursor = raw_conn.cursor()
+        cursor.execute(
+            "EXEC dbo.SP_Panel_Cenco_Estado_Cyber @Periodo=?, @Producto=?, @Estado=?",
+            (periodo, producto, estado),
+        )
+
+        columnas_resumen = [c[0] for c in cursor.description] if cursor.description else []
+        # OJO: se usa fetchall() (no fetchone()) aunque el resumen sea una unica
+        # fila. Con pyodbc + ODBC Driver 17, si el primer result set tiene una
+        # sola fila y se consume con un unico fetchone(), el cursor no queda
+        # marcado como agotado y cursor.nextset() puede devolver False de forma
+        # incorrecta, perdiendo silenciosamente el segundo result set (detalle).
+        # fetchall() SI deja el cursor correctamente posicionado para nextset().
+        filas_resumen = cursor.fetchall()
+        resumen = dict(zip(columnas_resumen, filas_resumen[0])) if filas_resumen else {}
+
+        detalle: list[dict] = []
+        if cursor.nextset() and cursor.description:
+            columnas_detalle = [c[0] for c in cursor.description]
+            detalle = [dict(zip(columnas_detalle, row)) for row in cursor.fetchall()]
+
+        return resumen, detalle
+    finally:
+        raw_conn.close()
 
 
 @router.get("/periodos", response_model=list[PeriodoOptionCenco])
@@ -317,4 +376,69 @@ def salidas_descarga(periodo: str):
         content=buffer.getvalue(),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename=Salidas_CENCO_{periodo}.xlsx"},
+    )
+
+
+@router.get("/estado-cyber", response_model=EstadoCyberResponseCenco)
+def estado_cyber(
+    periodo: str,
+    producto: int = 5,
+    estado: str | None = None,
+):
+    estado = _validar_estado_cyber(estado)
+
+    resumen, detalle = _ejecutar_estado_cyber(periodo, producto, estado)
+
+    return EstadoCyberResponseCenco(
+        resumen=EstadoCyberResumenCenco(
+            q_actualizado=resumen.get("Q_ACTUALIZADO", 0),
+            q_no_actualizado=resumen.get("Q_NO_ACTUALIZADO", 0),
+            q_total=resumen.get("Q_TOTAL", 0),
+        ),
+        filas=[
+            EstadoCyberFilaCenco(
+                rut=r["RUT"],
+                dv=r["DV"],
+                u6id=r["U6ID"],
+                operacion=r["OPERACION"],
+                tipo_de_cuenta=r["TIPO_DE_CUENTA"],
+                rsp_auto_ges=r["RSP_AUTO_GES"],
+                resp_jfastco=r["RESP_JFASTCO"],
+                estado=r["ESTADO"],
+            )
+            for r in detalle
+        ],
+    )
+
+
+@router.get("/estado-cyber/descarga")
+def estado_cyber_descarga(periodo: str, producto: int = 5, estado: str | None = None):
+    estado = _validar_estado_cyber(estado)
+    _, detalle = _ejecutar_estado_cyber(periodo, producto, estado)
+
+    if not detalle:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sin datos")
+
+    columnas = ["RUT", "DV", "U6ID", "OPERACION", "TIPO_DE_CUENTA", "RSP_AUTO_GES", "RESP_JFASTCO", "ESTADO"]
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Estado Cyber"
+    ws.append(columnas)
+    for celda in ws[1]:
+        celda.font = Font(color="FFFFFF", bold=True)
+        celda.fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    for r in detalle:
+        ws.append([r[c] for c in columnas])
+    for col in ws.columns:
+        letra = col[0].column_letter
+        ws.column_dimensions[letra].width = 22
+    ws.freeze_panes = "A2"
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=EstadoCyber_CENCO_{periodo}.xlsx"},
     )
